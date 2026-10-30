@@ -205,8 +205,8 @@
     flashFx = 1;
     Sound.flip(player.dir < 0);
     vibrate(12);
-    for (let i = 0; i < 9; i++) {
-      spawnParticle(geo.cx, player.y, player.dir < 0 ? '#8b5cff' : '#38f7e0', 0.7, player.dir * -0.25);
+    for (let i = 0; i < 6; i++) {
+      spawnParticle(geo.cx - geo.r * 0.4, player.y, player.dir < 0 ? '#8b5cff' : '#38f7e0', 0.5, player.dir * -0.3);
     }
   }
 
@@ -261,7 +261,7 @@
       life: 0.45 + Math.random() * 0.55,
       max: 1,
       color,
-      size: geo.r * (0.16 + Math.random() * 0.3) * (scale || 1),
+      size: geo.r * (0.11 + Math.random() * 0.2) * (scale || 1),
     });
   }
 
@@ -335,7 +335,7 @@
     player.rot += (Math.max(-1, Math.min(1, player.vy / (H * 0.9))) * 0.5 - player.rot) * Math.min(1, dt * 12);
 
     trail.push({ x: geo.cx, y: player.y });
-    if (trail.length > 20) trail.shift();
+    if (trail.length > 13) trail.shift();
 
     // ---- obstacles
     spawnGap -= px;
@@ -384,7 +384,7 @@
         comboBest = Math.max(comboBest, combo);
         Sound.orb(combo);
         vibrate(8);
-        for (let k = 0; k < 14; k++) spawnParticle(o.x, o.y, k % 2 ? '#ff3d8b' : '#ffd6f0', 0.8);
+        for (let k = 0; k < 8; k++) spawnParticle(o.x, o.y, k % 2 ? '#ff3d8b' : '#ffd6f0', 0.7);
         shake = Math.max(shake, H * 0.006);
       }
     }
@@ -424,9 +424,9 @@
       const a = 0.25 + s.z * 0.6;
       ctx.fillStyle = 'rgba(190,215,255,' + a.toFixed(3) + ')';
       ctx.fillRect(s.x, s.y, s.s * (0.6 + s.z), s.s * (0.6 + s.z));
-      if (s.z > 0.7) {
-        ctx.fillStyle = 'rgba(120,220,255,0.10)';
-        ctx.fillRect(s.x - s.z * 26, s.y + s.s * 0.3, s.z * 26, 1);
+      if (s.z > 0.82) {
+        ctx.fillStyle = 'rgba(120,220,255,0.07)';
+        ctx.fillRect(s.x - s.z * 11, s.y + s.s * 0.3, s.z * 11, 1);
       }
     }
   }
@@ -503,8 +503,8 @@
     ctx.fill();
 
     ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillRect(o.x + o.w * 0.42, o.side === 1 ? o.y + spike : o.y + o.h * 0.12, o.w * 0.16, o.h * 0.5);
+    ctx.fillStyle = 'rgba(255,255,255,0.16)';
+    ctx.fillRect(o.x + o.w * 0.44, o.side === 1 ? o.y + spike : o.y + o.h * 0.1, o.w * 0.12, o.h * 0.55);
     ctx.restore();
   }
 
@@ -531,15 +531,17 @@
   function drawPlayer() {
     if (mode === 'dead' && deathT > 0.05) return;
 
-    // trail
+    // trail: a short, dim comet tail that never competes with the hero
     ctx.save();
     for (let i = 0; i < trail.length; i++) {
       const p = trail[i];
-      const k = i / trail.length;
-      ctx.globalAlpha = k * 0.30;
+      const k = i / trail.length;           // 0 = oldest
+      ctx.globalAlpha = k * k * 0.22;
       ctx.fillStyle = player.dir < 0 ? '#8b5cff' : '#38f7e0';
-      const rr2 = geo.r * (0.35 + k * 0.5);
-      ctx.beginPath(); ctx.arc(p.x - (1 - k) * geo.r * 1.6, p.y, rr2, 0, 6.2832); ctx.fill();
+      const rr2 = geo.r * (0.16 + k * 0.34);
+      ctx.beginPath();
+      ctx.arc(p.x - (1 - k) * geo.r * 2.4, p.y, rr2, 0, 6.2832);
+      ctx.fill();
     }
     ctx.restore();
 
@@ -568,10 +570,15 @@
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.2832); ctx.fill();
 
-    // inner nucleus
+    // dark rim so the hero always reads against its own glow
     ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.beginPath(); ctx.arc(-r * 0.22, -r * 0.26, r * 0.3, 0, 6.2832); ctx.fill();
+    ctx.strokeStyle = 'rgba(6,10,22,0.55)';
+    ctx.lineWidth = Math.max(1.5, r * 0.12);
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.96, 0, 6.2832); ctx.stroke();
+
+    // inner nucleus
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.beginPath(); ctx.arc(-r * 0.2, -r * 0.24, r * 0.26, 0, 6.2832); ctx.fill();
     ctx.restore();
 
     // gravity arrow hint
@@ -615,8 +622,8 @@
     for (const o of obstacles) drawObstacle(o);
     for (const o of orbs) drawOrb(o);
 
-    drawPlayer();
     drawParticles();
+    drawPlayer();
 
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, W, H);
