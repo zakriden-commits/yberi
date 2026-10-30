@@ -1,0 +1,16 @@
+{
+  "name": "turnikman",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "TurnikMan — пародийный 3D-симулятор турника: физика, 4 карты, скины",
+  "scripts": {
+    "serve": "node scripts/serve.cjs",
+    "test": "node test/physics.test.mjs && node test/content.test.mjs && node test/headless.mjs",
+    "test:unit": "node test/physics.test.mjs && node test/content.test.mjs",
+    "test:headless": "node test/headless.mjs"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  }
+}
