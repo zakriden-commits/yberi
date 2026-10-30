@@ -14,7 +14,7 @@ import {
 
 /* ------------------------------------------------------------------ config */
 const CONFIG = {
-  viewWidth: 13.2,          // сколько мира видно по ширине
+  viewWidth: 12.2,          // сколько мира видно по ширине
   tilt: 21 * Math.PI / 180, // наклон камеры вниз (объём)
   walkSpeed: 2.6,
   exitDistance: 11,
@@ -341,16 +341,16 @@ function buildBeach() {
   // солнце
   sunGroup = new THREE.Group();
   const disc = new THREE.Mesh(
-    new THREE.CircleGeometry(3.4, 32),
+    new THREE.CircleGeometry(2.7, 32),
     new THREE.MeshBasicMaterial({ color: 0xfff3c4 })
   );
   sunGroup.add(disc);
   const halo = new THREE.Mesh(
-    new THREE.CircleGeometry(7, 32),
+    new THREE.CircleGeometry(5.6, 32),
     new THREE.MeshBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 0.22 })
   );
   sunGroup.add(halo);
-  sunGroup.position.set(-16, 17, -40);
+  sunGroup.position.set(-6.5, 13.5, -12);
   scene.add(sunGroup);
 
   // облака
