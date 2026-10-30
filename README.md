@@ -3,6 +3,27 @@
 Пародийный 3D-симулятор турника: качаешься на перекладине, отпускаешься, крутишь сальто,
 ловишь турник обратно и уходишь на чистое приземление. Монеты за трюки идут в магазин скинов.
 
+## Скачать
+
+- **APK для Android:** https://github.com/zakriden-commits/yberi/releases/latest/download/turnikman.apk
+- **Игра одним HTML-файлом (браузер):** https://github.com/zakriden-commits/yberi/releases/latest/download/TurnikMan.html
+- Все сборки: https://github.com/zakriden-commits/yberi/releases
+
+Установка APK: скачать на телефоне → открыть файл → разрешить установку из неизвестных источников → «Установить».
+Подпись — публичный тестовый ключ (`android/keystore.properties`), для RuStore/Play нужен свой.
+
+## Как собрать APK самому
+
+Сборка идёт в CI (`.github/workflows/android.yml`), локально нужен Android SDK.
+
+```bash
+git tag v1.0.5 && git push origin v1.0.5   # CI соберёт APK + AAB и положит в релиз
+```
+
+CI прогоняет тесты, собирает веб-часть, проверяет, что внутри APK лежат
+`assets/public/index.html`, `app.js`, `vendor/three.module.js` и `classes.dex`,
+и только потом публикует релиз.
+
 ## Запуск
 
 ```bash
