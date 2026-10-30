@@ -1,0 +1,86 @@
+name: TurnikMan — APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    name: Собрать подписанный APK + AAB
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Зависимости JS
+        run: npm ci
+
+      - name: Проверки (физика, контент, headless-прогон)
+        run: npm test
+
+      - name: Собрать одностраничную версию
+        run: npm run build
+
+      - name: Скопировать веб-часть в Android-проект
+        run: npx cap sync android
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Сборка release APK и AAB
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease bundleRelease
+
+      - name: Собрать итоговые файлы
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/app-release.apk out/turnikman.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab out/turnikman.aab
+          cp dist/TurnikMan.html out/TurnikMan.html
+          ls -lh out
+          sha256sum out/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: turnikman-android
+          path: out/*
+          retention-days: 90
+
+      - name: Опубликовать релиз со сборкой
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
+          name: TurnikMan — сборка ${{ github.run_number }}
+          body: |
+            Установочный файл TurnikMan для Android.
+
+            **Как поставить:** скачайте `turnikman.apk` на телефоне → откройте файл →
+            разрешите установку из неизвестных источников для браузера/файлового менеджера → «Установить».
+
+            `TurnikMan.html` — та же игра одним файлом, открывается в браузере без установки.
+            `turnikman.aab` — для загрузки в магазины приложений.
+
+            Подпись: публичный тестовый ключ (см. `android/keystore.properties`).
+          files: |
+            out/turnikman.apk
+            out/turnikman.aab
+            out/TurnikMan.html
+          fail_on_unmatched_files: true

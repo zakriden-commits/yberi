@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TurnikMan</string>
+    <string name="title_activity_main">TurnikMan</string>
+    <string name="package_name">com.zakriden.turnikman</string>
+    <string name="custom_url_scheme">com.zakriden.turnikman</string>
+</resources>
