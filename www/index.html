@@ -32,6 +32,7 @@
     <div class="lobby-row">
       <button id="mapsBtn" class="sub-btn">Карты</button>
       <button id="skinsBtn" class="sub-btn">Скины</button>
+      <button id="modeBtn" class="sub-btn">Режим</button>
     </div>
   </div>
 </div>
@@ -40,6 +41,8 @@
 <div id="hud" class="hud hidden">
   <div class="hud-top">
     <div class="hud-score"><span id="scoreValue">0</span></div>
+    <div id="timer" class="hud-timer hidden">60</div>
+    <div id="comboBadge" class="hud-combo hidden">×1</div>
     <button id="pauseBtn" class="icon-btn small" aria-label="Пауза">⏸</button>
   </div>
   <div id="trickPopup" class="trick-popup"></div>
@@ -56,6 +59,21 @@
   <button id="tuckBtn" class="ctrl-btn tuck">
     <span class="ctrl-icon">◉</span><span class="ctrl-label">ГРУППА</span>
   </button>
+</div>
+
+<!-- ================= обучение ================= -->
+<div id="tutorial" class="tutorial hidden">
+  <div class="tutorial-card">
+    <div class="tutorial-title">КАК ИГРАТЬ</div>
+    <ol class="tutorial-list">
+      <li><b>МАХ</b> — держи, чтобы раскачаться на перекладине.</li>
+      <li>Отпусти в верхней точке — <b>ДЕЙСТВИЕ</b>.</li>
+      <li><b>ГРУППА</b> в полёте — вращение быстрее, сальто успевает.</li>
+      <li>В воздухе жми <b>ДЕЙСТВИЕ</b>, чтобы схватиться снова.</li>
+      <li>Приземляйся прямо: кривое приземление обнуляет комбо.</li>
+    </ol>
+    <button id="tutorialBtn" class="main-btn">ПОНЯТНО</button>
+  </div>
 </div>
 
 <!-- ================= результат ================= -->

@@ -6,8 +6,8 @@
 import * as THREE from './vendor/three.module.js';
 import { Sim, PHYS, trickScore, coinsFor } from './physics.js';
 import {
-  SKINS, MAPS, skinById, mapById,
-  loadGame, saveGame, buySkin, selectSkin, selectMap, addCoins, recordRun,
+  SKINS, MAPS, MODES, skinById, mapById, modeById,
+  loadGame, saveGame, buySkin, selectSkin, selectMap, selectMode, addCoins, recordRun,
 } from './content.js';
 
 /* ------------------------------------------------------------------ save */
@@ -42,6 +42,8 @@ const ui = {
   actionLabel: $('actionLabel'),
   resultTitle: $('resultTitle'), resultScore: $('resultScore'), resultCoins: $('resultCoins'),
   musicRange: $('musicRange'), sfxRange: $('sfxRange'), musicVal: $('musicVal'), sfxVal: $('sfxVal'),
+  timer: $('timer'), combo: $('comboBadge'), modeBtn: $('modeBtn'),
+  tutorial: $('tutorial'), tutorialBtn: $('tutorialBtn'),
 };
 
 /* ------------------------------------------------------------------ audio */
@@ -711,13 +713,34 @@ function applyPose(dt, mode) {
 /* ------------------------------------------------------------------ игра */
 let sim = null;
 let score = 0;
-let combo = 0;
 let sessionCoins = 0;
 let running = false;
 let resultTimer = 0;
 let hintTimer = 0;
 const input = { pump: false, tuck: false, arch: false, grab: false, release: false };
 let lastPhase = 'hang';
+
+/* режим и комбо */
+let mode = modeById(save.mode);
+let timeLeft = 0;
+let combo = 0;
+const MULT_STEPS = [1, 1.5, 2, 2.5, 3];
+const multiplier = () => MULT_STEPS[Math.min(MULT_STEPS.length - 1, combo)];
+const tutorialOpen = () => ui.tutorial && !ui.tutorial.classList.contains('hidden');
+
+function updateRunHud() {
+  ui.score.textContent = score;
+  const timed = mode.time > 0;
+  ui.timer.classList.toggle('hidden', !timed);
+  if (timed) {
+    ui.timer.textContent = Math.max(0, Math.ceil(timeLeft));
+    ui.timer.classList.toggle('warn', timeLeft <= 10);
+  }
+  const m = multiplier();
+  ui.combo.classList.toggle('hidden', combo === 0);
+  ui.combo.textContent = '×' + (Number.isInteger(m) ? m : m.toFixed(1));
+  ui.combo.classList.toggle('hot', m >= 2.5);
+}
 
 function startRun() {
   Sound.resume();
@@ -736,12 +759,18 @@ function startRun() {
   hintTimer = 0;
   running = true;
   resultTimer = 0;
+  mode = modeById(save.mode);
+  timeLeft = mode.time;
+  combo = 0;
+  updateRunHud();
+  if (!save.settings.tutorial) ui.tutorial.classList.remove('hidden');
   camTarget.set(sim.x, 3.0, 0);
 }
 
-function endRun(clean, flips) {
+function endRun(clean, flips, timeout) {
   running = false;
-  const delta = trickScore({ flips, clean }).score + score * 0;
+  combo = 0;
+  const delta = Math.round(trickScore({ flips, clean }).score * 1) + score * 0;
   score += delta;
   const coins = coinsFor(delta + Math.round(score * 0.05));
   sessionCoins += coins;
@@ -749,7 +778,7 @@ function endRun(clean, flips) {
   const isRecord = recordRun(save, score, flips);
   persist();
 
-  ui.resultTitle.textContent = clean ? 'ЧИСТОЕ ПРИЗЕМЛЕНИЕ' : 'ПРИЗЕМЛЕНИЕ';
+  ui.resultTitle.textContent = timeout ? 'ВРЕМЯ ВЫШЛО' : clean ? 'ЧИСТОЕ ПРИЗЕМЛЕНИЕ' : 'ПРИЗЕМЛЕНИЕ';
   ui.resultScore.textContent = score;
   ui.resultCoins.textContent = sessionCoins;
   ui.result.classList.remove('hidden');
@@ -760,12 +789,16 @@ function endRun(clean, flips) {
 
 function respawn() {
   ui.result.classList.add('hidden');
+  mode = modeById(save.mode);
+  timeLeft = mode.time;
+  combo = 0;
   const map = mapById(save.map);
   sim = new Sim({ bars: map.bars.map((b) => ({ x: b.x, y: b.y })) });
   score = 0;
   sessionCoins = 0;
   ui.score.textContent = '0';
   running = true;
+  updateRunHud();
 }
 
 function onEvent(ev) {
@@ -777,16 +810,32 @@ function onEvent(ev) {
     Sound.tone({ freq: 400 + ev.flips * 90, dur: 0.09, type: 'triangle', vol: 0.1 });
   } else if (ev.type === 'grab') {
     const t = trickScore({ flips: ev.flips, regrab: true });
-    score += t.score;
-    const coins = coinsFor(t.score);
+    const gained = Math.round(t.score * multiplier());
+    score += gained;
+    const coins = coinsFor(gained);
     sessionCoins += coins;
     addCoins(save, coins);
-    ui.score.textContent = score;
-    showTrick(t.name + ' +' + t.score);
+    combo += 1;
+    updateRunHud();
+    showTrick(t.name + ' +' + gained + (combo > 1 ? '  ×' + multiplier() : ''));
     Sound.grab(); Sound.trick(2);
   } else if (ev.type === 'land') {
     Sound.land();
-    endRun(ev.clean, ev.flips);
+    if (mode.time > 0) {
+      const t = trickScore({ flips: ev.flips, clean: ev.clean });
+      const gained = Math.round(t.score * multiplier());
+      score += gained;
+      const coins = coinsFor(gained);
+      sessionCoins += coins;
+      addCoins(save, coins);
+      if (ev.clean) { combo += 1; showTrick((t.name ? t.name + ' ' : '') + '+' + gained); }
+      else { combo = 0; showTrick('МИМО'); }
+      updateRunHud();
+      sim.respawn();
+      running = true;
+    } else {
+      endRun(ev.clean, ev.flips);
+    }
   } else if (ev.type === 'sun') {
     score += 60;
     ui.score.textContent = score;
@@ -816,7 +865,7 @@ function tick() {
   const dt = Math.min(clock.getDelta(), 1 / 30);
 
   if (sim) {
-    if (running) {
+    if (running && !tutorialOpen()) {
       // физика фиксированным шагом
       const steps = Math.max(1, Math.round(dt / (1 / 120)));
       const h = dt / steps;
@@ -825,6 +874,15 @@ function tick() {
         sim.events().forEach(onEvent);
       }
       input.release = false;
+
+      if (mode.time > 0) {
+        timeLeft -= dt;
+        updateRunHud();
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          endRun(false, sim.flips || 0, true);
+        }
+      }
 
       if (hintTimer < 6) {
         hintTimer += dt;
@@ -879,6 +937,7 @@ function refreshLobby() {
   ui.coins.textContent = save.coins;
   ui.best.textContent = save.best;
   ui.skinsCoins.textContent = save.coins;
+  if (ui.modeBtn) ui.modeBtn.textContent = modeById(save.mode).name;
 }
 
 function renderMaps() {
@@ -1015,6 +1074,23 @@ function bindUi() {
     el.classList.remove('hidden');
     Sound.click();
   };
+  $('modeBtn').addEventListener('click', () => {
+    const i = MODES.findIndex((m) => m.id === save.mode);
+    const next = MODES[(i + 1) % MODES.length];
+    selectMode(save, next.id);
+    persist();
+    refreshLobby();
+    Sound.click();
+    toast(next.name + ' — ' + next.desc, '');
+  });
+
+  ui.tutorialBtn.addEventListener('click', () => {
+    ui.tutorial.classList.add('hidden');
+    save.settings.tutorial = true;
+    persist();
+    Sound.click();
+  });
+
   $('mapsBtn').addEventListener('click', () => openSheet(ui.mapsSheet, renderMaps));
   $('skinsBtn').addEventListener('click', () => openSheet(ui.skinsSheet, renderSkins));
   $('settingsBtn').addEventListener('click', () => openSheet(ui.settingsSheet));
@@ -1094,5 +1170,8 @@ window.__turnikman = {
   get sim() { return sim; },
   get score() { return score; },
   startRun, respawn, resetCharacterToBar, buildMap, buildCharacter,
-  PHYS, SKINS, MAPS,
+  PHYS, SKINS, MAPS, MODES,
+  get mode() { return mode; },
+  get timeLeft() { return timeLeft; },
+  get combo() { return combo; },
 };

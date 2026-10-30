@@ -59,6 +59,14 @@ export const MAPS = [
 
 export const mapById = (id) => MAPS.find((m) => m.id === id) || MAPS[0];
 
+/* ---------------- режимы заезда ---------------- */
+export const MODES = [
+  { id: 'free', name: 'СВОБОДНЫЙ', desc: 'один заезд — сколько вытянешь', time: 0 },
+  { id: 'timed', name: 'НА ВРЕМЯ', desc: '60 секунд, падения не заканчивают заезд', time: 60 },
+];
+
+export const modeById = (id) => MODES.find((m) => m.id === id) || MODES[0];
+
 /* ---------------- состояние ---------------- */
 export function createSave() {
   return {
@@ -69,8 +77,9 @@ export function createSave() {
     runs: 0,
     skin: 'classic',
     map: 'yard',
+    mode: 'free',
     owned: ['classic'],
-    settings: { music: 0.4, sfx: 0.75, muted: false },
+    settings: { music: 0.4, sfx: 0.75, muted: false, tutorial: false },
   };
 }
 
@@ -91,8 +100,10 @@ export function sanitize(raw) {
   s.skin = skinById(s.skin).id;
   if (!s.owned.includes(s.skin)) s.skin = 'classic';
   s.map = mapById(s.map).id;
+  s.mode = modeById(s.mode).id;
 
   s.settings = Object.assign({}, def.settings, s.settings || {});
+  s.settings.tutorial = s.settings.tutorial === true;
   const clamp01 = (v) => (Number.isFinite(Number(v)) ? Math.min(1, Math.max(0, Number(v))) : 0.5);
   s.settings.music = clamp01(s.settings.music);
   s.settings.sfx = clamp01(s.settings.sfx);
@@ -113,6 +124,13 @@ export function buySkin(save, id) {
 export function selectSkin(save, id) {
   if (!save.owned.includes(id)) return { ok: false, reason: 'locked' };
   save.skin = id;
+  return { ok: true };
+}
+
+export function selectMode(save, id) {
+  const mode = MODES.find((m) => m.id === id);
+  if (!mode) return { ok: false, reason: 'unknown' };
+  save.mode = mode.id;
   return { ok: true };
 }
 

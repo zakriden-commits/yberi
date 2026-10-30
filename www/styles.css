@@ -319,3 +319,39 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 
   .controls, .lobby-bottom { max-width: 560px; margin-left: auto; margin-right: auto; }
   .controls { left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 20px)); }
 }
+
+/* ---------------- таймер и комбо ---------------- */
+.hud-timer {
+  font-size: 26px; font-weight: 900; letter-spacing: 1px; color: var(--lime);
+  font-variant-numeric: tabular-nums;
+  padding: 2px 10px; border-radius: 12px;
+  background: rgba(13, 17, 23, .55); border: 1px solid rgba(198, 255, 61, .3);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .5);
+}
+.hud-timer.warn { color: #ff6b6b; border-color: rgba(255, 107, 107, .55); animation: timerPulse .8s ease-in-out infinite; }
+@keyframes timerPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+.hud-combo {
+  font-size: 17px; font-weight: 900; color: #0d1117;
+  background: var(--lime); padding: 3px 10px; border-radius: 999px;
+  box-shadow: 0 3px 0 #5f8c00;
+}
+.hud-combo.hot { background: #ff8a3d; box-shadow: 0 3px 0 #a84f12; }
+
+/* ---------------- обучение ---------------- */
+.tutorial {
+  position: fixed; inset: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center;
+  padding: 22px; background: rgba(5, 8, 12, .82);
+  backdrop-filter: blur(3px);
+}
+.tutorial-card {
+  width: 100%; max-width: 380px;
+  background: #12171e; border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 22px; padding: 20px 20px 24px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.tutorial-title { font-size: 13px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; }
+.tutorial-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; font-size: 14.5px; line-height: 1.45; color: var(--text); }
+.tutorial-list b { color: var(--lime); }
+.tutorial .main-btn { width: 100%; }

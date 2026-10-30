@@ -12,6 +12,10 @@ jobs:
   apk:
     name: Собрать подписанный APK + AAB
     runs-on: ubuntu-24.04
+    env:
+      # Размер балластного пака в МБ. 0 — обычная лёгкая сборка.
+      # Меняется без правки кода: gh variable set PAD_MB --body 256
+      PAD_MB: ${{ vars.PAD_MB || '0' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,6 +35,22 @@ jobs:
 
       - name: Скопировать веб-часть в Android-проект
         run: npx cap sync android
+
+      - name: Добавить балластный пак (если PAD_MB > 0)
+        if: env.PAD_MB != '0'
+        run: |
+          set -e
+          PAD_DIR=android/app/src/main/assets/pad
+          mkdir -p "$PAD_DIR"
+          dd if=/dev/urandom of="$PAD_DIR/pad.bin" bs=1M count="$PAD_MB" status=none
+          cat > "$PAD_DIR/README.txt" <<'TXT'
+          Балластный пак TurnikMan.
+          Это не игровые данные: файл нужен только для увеличения размера APK.
+          Игра его не читает и не загружает — на геймплей он не влияет.
+          Убрать: gh variable set PAD_MB --body 0 и пересобрать.
+          TXT
+          ls -lh "$PAD_DIR"
+          echo "балласт: ${PAD_MB} МБ"
 
       - uses: actions/setup-java@v5
         with:
@@ -67,6 +87,10 @@ jobs:
           unzip -l "$APK" | grep -q "classes.dex" || { echo "✗ в APK нет classes.dex"; exit 1; }
           echo "✓ веб-часть и код на месте:"
           unzip -l "$APK" | grep -E "assets/public/(index.html|app.js|styles.css|vendor)" | head -10
+          if [ "${PAD_MB}" != "0" ]; then
+            unzip -l "$APK" | grep -q "assets/pad/pad.bin" || { echo "✗ балласт не попал в APK"; exit 1; }
+            echo "✓ балласт на месте: $(unzip -l "$APK" | grep 'assets/pad/pad.bin' | awk '{printf "%.0f МБ", $1/1048576}')"
+          fi
           echo "✓ размер APK: $(du -h "$APK" | cut -f1)"
 
       - uses: actions/upload-artifact@v4
@@ -83,6 +107,10 @@ jobs:
           name: TurnikMan — сборка ${{ github.run_number }}
           body: |
             Установочный файл TurnikMan для Android.
+
+            Размер этой сборки увеличен балластным паком (`PAD_MB`): внутри APK лежит
+            неиспользуемый файл, игра его не читает. На геймплей не влияет —
+            убрать можно переменной репозитория `PAD_MB=0`.
 
             **Как поставить:** скачайте `turnikman.apk` на телефоне → откройте файл →
             разрешите установку из неизвестных источников для браузера/файлового менеджера → «Установить».

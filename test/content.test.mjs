@@ -1,6 +1,6 @@
 import {
-  SKINS, MAPS, createSave, sanitize, buySkin, selectSkin, selectMap, addCoins,
-  recordRun, saveGame, loadGame, skinById, mapById, SAVE_KEY,
+  SKINS, MAPS, MODES, createSave, sanitize, buySkin, selectSkin, selectMap, selectMode, addCoins,
+  recordRun, saveGame, loadGame, skinById, mapById, modeById, SAVE_KEY,
 } from '../www/content.js';
 
 let pass = 0, fail = 0;
@@ -106,6 +106,29 @@ test('рекорд обновляется', () => {
 test('скин по id находится, неизвестный заменяется классикой', () => {
   eq(skinById('neon').name, 'Неон');
   eq(skinById('nope').id, 'classic');
+});
+
+test('режимы: выбор и защита от мусора', () => {
+  const s = createSave();
+  eq(s.mode, 'free');
+  eq(selectMode(s, 'timed').ok, true);
+  eq(s.mode, 'timed');
+  eq(selectMode(s, 'ультрахард').ok, false);
+  eq(s.mode, 'timed');
+});
+test('длительность режимов', () => {
+  eq(modeById('free').time, 0);
+  eq(modeById('timed').time, 60);
+  eq(modeById('nope').id, 'free');
+});
+test('обучение по умолчанию не пройдено и чинится из мусора', () => {
+  eq(createSave().settings.tutorial, false);
+  eq(sanitize({ settings: { tutorial: 'да' } }).settings.tutorial, false);
+  eq(sanitize({ settings: { tutorial: true } }).settings.tutorial, true);
+});
+test('sanitize чинит неизвестный режим', () => {
+  eq(sanitize({ mode: 'лол' }).mode, 'free');
+  eq(sanitize({ mode: 'timed' }).mode, 'timed');
 });
 
 console.log('\n' + (fail ? '✗ провалено: ' + fail : '✓ контент в порядке') + ' (успешно: ' + pass + ')');

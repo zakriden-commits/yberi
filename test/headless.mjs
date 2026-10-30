@@ -70,6 +70,15 @@ const realIds = [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
 const elements = new Map();
 for (const id of realIds) elements.set(id, makeEl('div', id));
 
+/* проставляем классы из разметки — иначе .hidden не работает как в браузере */
+for (const m of html.matchAll(/<[a-z]+\b[^>]*>/g)) {
+  const tag = m[0];
+  const id = /id="([^"]+)"/.exec(tag)?.[1];
+  const cls = /class="([^"]+)"/.exec(tag)?.[1];
+  if (!id || !cls || !elements.has(id)) continue;
+  for (const c of cls.split(/\s+/).filter(Boolean)) elements.get(id).classList.add(c);
+}
+
 const created = [];
 globalThis.document = {
   body: makeEl('body'),
@@ -171,6 +180,17 @@ check('персонаж собирается', charOk);
 tm.startRun();
 check('заезд стартует, sim создан', !!tm.sim && tm.sim.phase === 'hang');
 
+/* ---------------------------------------------------------- обучение */
+const tutEl = elements.get('tutorial');
+check('при первом запуске показано обучение', !tutEl.classList.contains('hidden'));
+const thetaBeforeTut = tm.sim.theta;
+frames(60);
+check('пока обучение открыто, физика на паузе', tm.sim.theta === thetaBeforeTut,
+  'theta ' + thetaBeforeTut.toFixed(3) + '→' + tm.sim.theta.toFixed(3));
+elements.get('tutorialBtn').fire('click');
+check('обучение закрывается по кнопке', tutEl.classList.contains('hidden'));
+check('факт обучения сохраняется', tm.save.settings.tutorial === true);
+
 const pumpEl = elements.get('pumpBtn');
 const actionEl = elements.get('actionBtn');
 
@@ -229,6 +249,34 @@ for (const mapId of ['beach', 'gym', 'park']) {
 }
 tm.save.map = map0;
 tm.buildMap(mapById(map0));
+
+/* ---------------------------------------------------------- режим на время */
+tm.save.mode = 'timed';
+tm.startRun();
+const timerEl = elements.get('timer');
+check('в режиме на время таймер виден', !timerEl.classList.contains('hidden'));
+check('стартовое время 60 секунд', tm.timeLeft > 59 && tm.timeLeft <= 60, 'timeLeft=' + tm.timeLeft.toFixed(2));
+frames(120);
+check('таймер убывает', tm.timeLeft < 60, 'timeLeft=' + tm.timeLeft.toFixed(2));
+
+elements.get('actionBtn').fire('pointerdown');   // срыв с турника
+elements.get('actionBtn').fire('pointerdown');   // попытка перехвата
+frames(500);
+check('в режиме на время падение не закрывает заезд', elements.get('result').classList.contains('hidden'));
+check('после падения игрок возвращается на перекладину', tm.sim.phase === 'hang', 'phase=' + tm.sim.phase);
+
+let guard = 0;
+while (elements.get('result').classList.contains('hidden') && guard < 5000) { frames(1); guard++; }
+check('время вышло — заезд закрылся сам', !elements.get('result').classList.contains('hidden'), 'кадров: ' + guard);
+check('заголовок «ВРЕМЯ ВЫШЛО»', elements.get('resultTitle').textContent === 'ВРЕМЯ ВЫШЛО',
+  'получено: ' + elements.get('resultTitle').textContent);
+
+/* переключение режима кнопкой */
+tm.save.mode = 'free';
+elements.get('modeBtn').fire('click');
+check('кнопка режима переключает на «на время»', tm.save.mode === 'timed', 'mode=' + tm.save.mode);
+elements.get('modeBtn').fire('click');
+check('кнопка режима возвращает «свободный»', tm.save.mode === 'free', 'mode=' + tm.save.mode);
 
 /* ---------------------------------------------------------- магазин */
 const closed = SKINS.filter((s) => s.price > 0 && !tm.save.owned.includes(s.id));
