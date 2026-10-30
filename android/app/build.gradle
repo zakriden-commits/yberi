@@ -1,0 +1,28 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.sasny.nurmadof'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.sasny.nurmadof'
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            // Publicly shared builds use the debug variant so it can be built without private signing keys.
+            // For Play Store distribution, configure a private release signing key outside the repository.
+            minifyEnabled false
+        }
+    }
+}
