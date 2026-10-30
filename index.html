@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101119">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Сасный Нурмадог — мобильная звуковая игра с четырьмя фото и семью смешными синтезированными эффектами.">
+  <title>Сасный Нурмадог — звуковой ринг</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="ambient ambient--one" aria-hidden="true"></div>
+  <div class="ambient ambient--two" aria-hidden="true"></div>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Сасный Нурмадог — в меню">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="none">
+            <path d="M8 23.5h4.4l3.1-8.1 4.2 12.2 3.4-8.1h8.9" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="31.5" cy="12" r="2" fill="currentColor"/>
+          </svg>
+        </span>
+        <span class="brand-copy"><strong>НУРМАДОГ</strong><small>ЗВУКОВОЙ РИНГ</small></span>
+      </a>
+      <div class="topbar-actions">
+        <button class="install-button" id="install-button" type="button" hidden>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5v9m0 0 3.4-3.4M10 11.5 6.6 8.1M3.5 13v3h13v-3"/></svg>
+          УСТАНОВИТЬ
+        </button>
+        <button class="audio-toggle" id="audio-toggle" type="button" aria-pressed="true" aria-label="Выключить звук">
+          <span class="audio-toggle__icon" aria-hidden="true">
+            <svg class="icon-sound" viewBox="0 0 20 20" fill="none"><path d="M3 8v4h3l4 3V5L6 8H3Z"/><path d="M13 7.2a4 4 0 0 1 0 5.6M15.5 4.8a7.4 7.4 0 0 1 0 10.4"/></svg>
+            <svg class="icon-muted" viewBox="0 0 20 20" fill="none"><path d="M3 8v4h3l4 3V5L6 8H3Z"/><path d="m13 8 4 4m0-4-4 4"/></svg>
+          </span>
+          <span id="audio-label">ЗВУК ВКЛ</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="screen screen--menu" id="menu-screen" aria-labelledby="game-title">
+        <div class="menu-hero">
+          <div class="intro-copy">
+            <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> АБСОЛЮТНО НЕСЕРЬЁЗНЫЙ ЧЕМПИОНАТ</p>
+            <h1 id="game-title"><span class="title-lime">САСНЫЙ</span><span>НУРМАДОГ</span></h1>
+            <p class="intro-description">Выбирай кадр, жми на него и выпускай <span>семь легендарных звуков.</span> Ринг готов. Ты — тоже?</p>
+            <div class="intro-stats" aria-label="В игре четыре фотографии и семь звуков">
+              <div class="stat-pill"><strong>04</strong><span>ФОТО</span></div>
+              <span class="stat-divider" aria-hidden="true"></span>
+              <div class="stat-pill"><strong>07</strong><span>ЗВУКОВ</span></div>
+              <span class="tiny-spark" aria-hidden="true">✳</span>
+            </div>
+            <div class="intro-footnote"><span class="footnote-icon" aria-hidden="true">↘</span> Нажми на карточку, чтобы выйти на ринг</div>
+          </div>
+
+          <section class="selection-panel" aria-labelledby="selection-title">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">РАУНД 01 <span aria-hidden="true">/</span> ВЫБОР КАДРА</p>
+                <h2 id="selection-title">Выбери фото</h2>
+              </div>
+              <span class="photo-count">4 В КОЛЛЕКЦИИ</span>
+            </div>
+
+            <div class="photo-grid">
+              <button class="photo-card" type="button" data-photo="./assets/fight-1.png" data-title="У клетки" aria-label="Выбрать фото: У клетки">
+                <span class="photo-card__imagewrap"><img src="./assets/fight-1.png" alt="Бойцы у сетки октагона" fetchpriority="high"><span class="photo-card__wash"></span><span class="photo-card__number">01</span><span class="photo-card__select" aria-hidden="true">↗</span></span>
+                <span class="photo-card__caption"><strong>У клетки</strong><small>ВЫХОД НА РИНГ</small></span>
+              </button>
+              <button class="photo-card" type="button" data-photo="./assets/fight-2.png" data-title="Жаркий раунд" aria-label="Выбрать фото: Жаркий раунд">
+                <span class="photo-card__imagewrap"><img src="./assets/fight-2.png" alt="Бойцы в разгаре схватки" loading="lazy"><span class="photo-card__wash"></span><span class="photo-card__number">02</span><span class="photo-card__select" aria-hidden="true">↗</span></span>
+                <span class="photo-card__caption"><strong>Жаркий раунд</strong><small>БЕЗ ПЕРЕРЫВА</small></span>
+              </button>
+              <button class="photo-card" type="button" data-photo="./assets/fight-3.png" data-title="Крупный план" aria-label="Выбрать фото: Крупный план">
+                <span class="photo-card__imagewrap"><img src="./assets/fight-3.png" alt="Крупный план бойца в октагоне" loading="lazy"><span class="photo-card__wash"></span><span class="photo-card__number">03</span><span class="photo-card__select" aria-hidden="true">↗</span></span>
+                <span class="photo-card__caption"><strong>Крупный план</strong><small>ЭМОЦИИ НА МАКСИМУМ</small></span>
+              </button>
+              <button class="photo-card" type="button" data-photo="./assets/fight-4.png" data-title="Выход рефери" aria-label="Выбрать фото: Выход рефери">
+                <span class="photo-card__imagewrap"><img src="./assets/fight-4.png" alt="Рефери объявляет результат боя" loading="lazy"><span class="photo-card__wash"></span><span class="photo-card__number">04</span><span class="photo-card__select" aria-hidden="true">↗</span></span>
+                <span class="photo-card__caption"><strong>Выход рефери</strong><small>ФИНАЛЬНЫЙ СВИСТОК</small></span>
+              </button>
+            </div>
+
+            <div class="upload-row">
+              <input id="photo-upload" class="visually-hidden" type="file" accept="image/*" aria-label="Выбрать фото с устройства">
+              <button class="upload-button" id="upload-button" type="button">
+                <span class="upload-plus" aria-hidden="true">+</span>
+                <span class="upload-copy"><strong>Своё фото</strong><small>Остаётся только на твоём устройстве</small></span>
+                <svg class="upload-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4"/></svg>
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="screen screen--game" id="game-screen" aria-labelledby="arena-title" hidden>
+        <div class="game-toolbar">
+          <button class="back-button" id="back-button" type="button"><span aria-hidden="true">←</span> ДРУГОЕ ФОТО</button>
+          <div class="game-badge"><span class="live-dot" aria-hidden="true"></span> ЗВУКОВОЙ РИНГ <span class="game-badge__slash">/</span> 7 ЭФФЕКТОВ</div>
+        </div>
+
+        <div class="game-layout">
+          <section class="arena-panel" aria-label="Фото для звукового раунда">
+            <div class="arena-heading">
+              <div><p class="panel-kicker">ТВОЙ ВЫХОД <span aria-hidden="true">/</span> <span id="selected-title">ВЫБРАННЫЙ КАДР</span></p><h2 id="arena-title">Приготовься!</h2></div>
+              <div class="hit-counter"><span class="hit-counter__label">ТЫЧКИ</span><strong id="hit-count">00</strong></div>
+            </div>
+            <button class="stage-photo" id="stage-photo" type="button" aria-label="Нажми на фотографию, чтобы проиграть следующий звук">
+              <img id="active-photo" src="./assets/fight-1.png" alt="Выбранное фото">
+              <span class="stage-photo__shade" aria-hidden="true"></span>
+              <span class="stage-photo__corner stage-photo__corner--tl" aria-hidden="true"></span>
+              <span class="stage-photo__corner stage-photo__corner--br" aria-hidden="true"></span>
+              <span class="stage-tap-cue"><span class="tap-ring" aria-hidden="true"><span>↗</span></span><span>ТАПНИ ПО ФОТО</span></span>
+              <span class="impact-label" id="impact-label" aria-hidden="true">ПФФ!</span>
+              <span class="fx-layer" id="fx-layer" aria-hidden="true"></span>
+            </button>
+            <div class="arena-caption"><span><i class="caption-dot" aria-hidden="true"></i> <strong id="photo-caption">У клетки</strong></span><span>ФОТО НЕ ПОСТРАДАЕТ <b aria-hidden="true">✳</b></span></div>
+          </section>
+
+          <section class="sound-deck" aria-labelledby="sound-title">
+            <div class="deck-header">
+              <div><p class="panel-kicker">ГЛАВНЫЙ ИНСТРУМЕНТ</p><h2 id="sound-title">Звуковой арсенал</h2></div>
+              <div class="sound-stamp" aria-label="Семь синтезированных звуков"><strong>07</strong><span>ЗВУКОВ</span></div>
+            </div>
+
+            <button class="play-button" id="play-button" type="button">
+              <span class="play-button__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h3l2.4-5.2L14 18l2.1-4H20"/></svg></span>
+              <span class="play-button__copy"><strong>ДАТЬ ЗВУК</strong><small>Следующий эффект по кругу</small></span>
+              <span class="play-button__arrow" aria-hidden="true">↗</span>
+            </button>
+
+            <div class="sound-now" aria-live="polite">
+              <span class="sound-now__label"><span class="equalizer" aria-hidden="true"><i></i><i></i><i></i><i></i></span> СЕЙЧАС ИГРАЕТ</span>
+              <strong id="current-sound">Нажми на фото, чтобы начать</strong>
+            </div>
+
+            <div class="sound-rack">
+              <div class="rack-heading"><span>ВЫБЕРИ ЭФФЕКТ</span><span>НАЖМИ НА НОМЕР</span></div>
+              <div class="sound-pads" role="group" aria-label="Семь звуковых эффектов">
+                <button class="sound-pad" type="button" data-sound-index="0" aria-label="Проиграть звук 1: Короткий пфф"><span class="sound-pad__number">01</span><strong>ПФФ</strong></button>
+                <button class="sound-pad" type="button" data-sound-index="1" aria-label="Проиграть звук 2: Бульк-бульк"><span class="sound-pad__number">02</span><strong>БУЛЬК</strong></button>
+                <button class="sound-pad" type="button" data-sound-index="2" aria-label="Проиграть звук 3: Турбо-пшик"><span class="sound-pad__number">03</span><strong>ТУРБО</strong></button>
+                <button class="sound-pad" type="button" data-sound-index="3" aria-label="Проиграть звук 4: Пружинка"><span class="sound-pad__number">04</span><strong>ПРЫГ</strong></button>
+                <button class="sound-pad" type="button" data-sound-index="4" aria-label="Проиграть звук 5: Дробный залп"><span class="sound-pad__number">05</span><strong>ТРЕЛЬ</strong></button>
+                <button class="sound-pad" type="button" data-sound-index="5" aria-label="Проиграть звук 6: Суперкомбо"><span class="sound-pad__number">06</span><strong>КОМБО</strong></button>
+                <button class="sound-pad" type="button" data-sound-index="6" aria-label="Проиграть звук 7: Финальный раскат"><span class="sound-pad__number">07</span><strong>ФИНАЛ</strong></button>
+              </div>
+            </div>
+
+            <p class="deck-note"><span aria-hidden="true">✳</span> Все семь эффектов создаются прямо в браузере — интернет не нужен.</p>
+          </section>
+        </div>
+        <div class="game-bottomline"><span>ОСТОРОЖНО: МОЖНО ЗАСМЕЯТЬСЯ</span><span>РАУНД НЕ ИМЕЕТ КОНЦА <b aria-hidden="true">↗</b></span></div>
+      </section>
+    </main>
+
+    <footer class="site-footer"><span>СДЕЛАНО ДЛЯ СМЕХА <b aria-hidden="true">✳</b></span><span>ЗВУКИ СИНТЕЗИРУЮТСЯ НА ТВОЁМ УСТРОЙСТВЕ</span></footer>
+  </div>
+  <div class="sr-only" id="live-announcer" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>
