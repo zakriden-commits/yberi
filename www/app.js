@@ -3,7 +3,7 @@
    Один файл со всей игрой: сцена, персонажи, экономика, звук, интерфейс.
    ===================================================================== */
 
-import * as THREE from 'three';
+import * as THREE from './vendor/three.module.js';
 import {
   loadState, saveState,
   TIERS, UPGRADES, UPGRADE_ORDER, buyUpgrade, upgradeCost,
@@ -303,7 +303,7 @@ function fitCamera() {
 /* ---------------------------------------------------------------- beach */
 function buildBeach() {
   // песок
-  const sandGeo = new THREE.PlaneGeometry(190, 90, 1, 1);
+  const sandGeo = new THREE.PlaneGeometry(190, 54, 1, 1);
   const sand = new THREE.Mesh(sandGeo, new THREE.MeshStandardMaterial({ color: 0xf0d29b, roughness: 1 }));
   sand.rotation.x = -Math.PI / 2;
   sand.position.set(0, 0, 0);
@@ -313,7 +313,7 @@ function buildBeach() {
   // мокрый песок у кромки
   const wet = new THREE.Mesh(new THREE.PlaneGeometry(190, 6), new THREE.MeshStandardMaterial({ color: 0xd8b688, roughness: 0.85 }));
   wet.rotation.x = -Math.PI / 2;
-  wet.position.set(0, 0.006, -30);
+  wet.position.set(0, 0.008, -25.2);
   scene.add(wet);
 
   // море
@@ -324,7 +324,7 @@ function buildBeach() {
   });
   seaMesh = new THREE.Mesh(seaGeo, seaMat);
   seaMesh.rotation.x = -Math.PI / 2;
-  seaMesh.position.set(0, -0.12, -60);
+  seaMesh.position.set(0, -0.06, -60);
   seaMesh.receiveShadow = false;
   scene.add(seaMesh);
   seaMesh.userData.base = seaGeo.attributes.position.array.slice();
@@ -335,7 +335,7 @@ function buildBeach() {
     new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 })
   );
   foam.rotation.x = -Math.PI / 2;
-  foam.position.set(0, 0.02, -26.6);
+  foam.position.set(0, 0.03, -26.2);
   scene.add(foam);
 
   // солнце
@@ -473,7 +473,7 @@ function buildProps() {
    а наклон камеры разводит ряды по высоте экрана. */
 const STATION_DEFS = [
   { id: 'pullup', kind: 'pullup', x: -3.9, z: -3.1, name: 'Турник', build: buildPullup,
-    stand: { x: -3.9, z: -3.0, y: 0 } },
+    stand: { x: -3.9, z: -2.55, y: 0 } },
   { id: 'kettlebell', kind: 'kettlebell', x: -3.9, z: 1.7, name: 'Гири', build: buildKettlebells,
     stand: { x: -3.9, z: 0.9, y: 0 } },
   { id: 'ring', kind: 'boxing', x: 2.1, z: -3.4, name: 'Ринг', build: buildRing,
@@ -909,7 +909,7 @@ function updateClients(dt, t) {
         c.state = 'train';
         c.t = 0;
         p.position.set(c.stationX, c.stationY, c.stationZ);
-        p.rotation.y = c.station.def.kind === 'boxing' ? Math.PI : 0;
+        p.rotation.y = 0;
         payClient(c);
       } else {
         const step = Math.min(dist, CONFIG.walkSpeed * dt);
