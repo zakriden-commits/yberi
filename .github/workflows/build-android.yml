@@ -19,22 +19,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4.0.4
+
+      - name: Verify Android SDK tools
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME:-unset}"
+          command -v sdkmanager
+          sdkmanager --version
 
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6.4.1
         with:
           gradle-version: '8.9'
 
@@ -52,7 +58,7 @@ jobs:
         run: cp android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/Sasny-Nurmadog.apk
 
       - name: Upload APK as a workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: Sasny-Nurmadog-Android-APK
           path: android/app/build/outputs/apk/debug/Sasny-Nurmadog.apk
