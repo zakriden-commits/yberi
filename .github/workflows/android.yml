@@ -1,0 +1,74 @@
+name: Android build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    name: Build signed APK + AAB
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Sync web assets into the Android project
+        run: npx cap sync android
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APK + AAB
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease bundleRelease
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/app-release.apk out/strong-tycoon.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab out/strong-tycoon.aab
+          ls -lh out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: strong-tycoon-android
+          path: out/*
+          retention-days: 90
+
+      - name: Publish release with the APK
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
+          name: STRONG TYCOON — сборка ${{ github.run_number }}
+          body: |
+            **STRONG TYCOON** — 3D-тайкун пляжного зала.
+
+            Скачайте `strong-tycoon.apk` на телефоне → откройте файл → разрешите установку
+            из этого источника → «Установить».
+
+            `strong-tycoon.aab` — формат для Google Play / RuStore.
+          files: |
+            out/strong-tycoon.apk
+            out/strong-tycoon.aab
+          fail_on_unmatched_files: true

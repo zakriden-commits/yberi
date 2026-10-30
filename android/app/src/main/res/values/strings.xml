@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">STRONG TYCOON</string>
+    <string name="title_activity_main">STRONG TYCOON</string>
+    <string name="package_name">com.zakriden.strongtycoon</string>
+    <string name="custom_url_scheme">com.zakriden.strongtycoon</string>
+</resources>

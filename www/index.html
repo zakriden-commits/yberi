@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>STRONG TYCOON</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1a24" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hud hidden">
+  <div class="hud-row">
+    <div class="chip chip-money">
+      <span class="chip-icon">💰</span>
+      <span id="moneyValue">0</span>
+      <span class="chip-cur">₽</span>
+    </div>
+    <div class="chip chip-rank">
+      <span id="rankName">Пляжный сарай</span>
+    </div>
+
+    <div class="hud-spacer"></div>
+
+    <button id="settingsBtn" class="icon-btn" aria-label="Настройки">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path fill="currentColor" d="M19.14 12.94a7.7 7.7 0 0 0 .05-.94 7.7 7.7 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.62l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.86a.5.5 0 0 0 .12.62l2.03 1.58c-.03.31-.05.62-.05.94s.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.62l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.39 1.04.7 1.62.94l.36 2.54c.04.24.25.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.24 1.12-.55 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.62l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="hud-sub">
+    <div class="pill" id="clientsPill">👥 <b id="clientsNow">0</b>/<span id="stationsMax">2</span></div>
+    <div class="pill" id="tierPill">🎟 <b id="tierName">Пробный</b></div>
+    <div class="pill" id="timePill">⏱ <b id="timeScale">×1.00</b></div>
+  </div>
+</div>
+
+<!-- ============ bottom bar ============ -->
+<div id="bottomBar" class="bottom-bar hidden">
+  <button id="upgradesBtn" class="big-btn">
+    <span class="bb-icon">🛠</span><span>Улучшения</span>
+  </button>
+  <button id="catalogBtn" class="big-btn accent">
+    <span class="bb-icon">🎟</span><span>Абонементы</span>
+  </button>
+</div>
+
+<!-- ============ splash ============ -->
+<div id="splash" class="screen">
+  <div class="splash-inner">
+    <img id="splashLogo" class="splash-logo" src="assets/logo.png" alt="STRONG TYCOON" />
+    <div class="splash-sub">пляжный зал · тайкун</div>
+    <div id="splashStatus" class="splash-status">Загрузка…</div>
+    <button id="playBtn" class="play-btn hidden">ИГРАТЬ</button>
+    <button id="resetGameBtn" class="link-btn hidden">начать заново</button>
+  </div>
+</div>
+
+<!-- ============ settings sheet ============ -->
+<div id="settingsSheet" class="sheet-wrap hidden">
+  <div class="sheet small">
+    <div class="sheet-head">
+      <h2>Настройки</h2>
+      <button class="sheet-close" data-close="settingsSheet">✕</button>
+    </div>
+    <div class="sheet-body">
+      <label class="slider-row">
+        <span>🎵 Музыка</span>
+        <input id="musicRange" type="range" min="0" max="100" value="45" />
+        <b id="musicVal">45</b>
+      </label>
+      <label class="slider-row">
+        <span>🔊 Звуки</span>
+        <input id="sfxRange" type="range" min="0" max="100" value="70" />
+        <b id="sfxVal">70</b>
+      </label>
+      <button id="muteBtn" class="ghost-btn">Выключить звук целиком</button>
+      <div class="divider"></div>
+      <button id="saveInfo" class="ghost-btn">💾 Прогресс сохраняется сам</button>
+      <button id="resetProgress" class="ghost-btn danger">Сбросить прогресс</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ upgrades sheet ============ -->
+<div id="upgradesSheet" class="sheet-wrap hidden">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Улучшения</h2>
+      <div class="sheet-money">💰 <b id="sheetMoney">0</b> ₽</div>
+      <button class="sheet-close" data-close="upgradesSheet">✕</button>
+    </div>
+    <div class="sheet-body" id="upgradeList"></div>
+  </div>
+</div>
+
+<!-- ============ catalog sheet ============ -->
+<div id="catalogSheet" class="sheet-wrap hidden">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Каталог абонементов</h2>
+      <div class="sheet-money">💰 <b id="catalogMoney">0</b> ₽</div>
+      <button class="sheet-close" data-close="catalogSheet">✕</button>
+    </div>
+    <div class="sheet-body" id="catalogList"></div>
+  </div>
+</div>
+
+<div id="toasts" class="toasts"></div>
+<div id="floaters" class="floaters"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

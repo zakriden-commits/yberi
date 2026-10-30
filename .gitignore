@@ -1,0 +1,19 @@
+node_modules/
+.npm/
+
+# android build output
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/capacitor-cordova-android-plugins/
+android/app/src/main/assets/public/
+*.apk
+*.aab
+*.jks
+out/
+
+.DS_Store
+*.log
+.venv/
+__pycache__/

@@ -1,0 +1,9 @@
+{
+  "appId": "com.zakriden.strongtycoon",
+  "appName": "STRONG TYCOON",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#071820"
+  }
+}
