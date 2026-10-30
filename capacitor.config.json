@@ -1,0 +1,9 @@
+{
+  "appId": "com.zakriden.flip",
+  "appName": "ФЛИП",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#070912"
+  }
+}

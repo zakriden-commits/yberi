@@ -1,0 +1,19 @@
+{
+  "name": "flip-game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ФЛИП — однопальцевая аркада с переворотом гравитации",
+  "scripts": {
+    "icons": "node scripts/make-icons.js",
+    "serve": "node scripts/serve.js",
+    "sync": "cap sync android",
+    "open:android": "cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/core": "^8.6.0"
+  }
+}

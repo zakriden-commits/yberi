@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>ФЛИП</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#070912" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hud">
+    <div class="hud-score">
+      <span id="score">0</span>
+      <span class="hud-unit">очк.</span>
+    </div>
+    <div class="hud-right">
+      <div class="hud-best">Рекорд <b id="best">0</b></div>
+      <button id="soundBtn" class="icon-btn" aria-label="Звук">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path id="soundIcon" d=""/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="menu" class="screen">
+    <div class="logo">
+      <div class="logo-flip">ФЛИП</div>
+      <div class="logo-sub">один палец · две стороны</div>
+    </div>
+    <button id="playBtn" class="cta">ИГРАТЬ</button>
+    <div class="hint">
+      <div class="hint-row"><span class="key">ТАП</span> переворачивает гравитацию</div>
+      <div class="hint-row"><span class="dot orb"></span> сфера — +5 очков</div>
+      <div class="hint-row"><span class="dot spike"></span> шип — конец забега</div>
+    </div>
+  </div>
+
+  <div id="over" class="screen hidden">
+    <div class="over-title">ЗАБЕГ ОКОНЧЕН</div>
+    <div class="over-score">
+      <span id="finalScore">0</span>
+      <span class="over-unit">очков</span>
+    </div>
+    <div id="recordLine" class="record hidden">НОВЫЙ РЕКОРД</div>
+    <div class="over-stats">
+      <div><b id="statDist">0</b><span>метров</span></div>
+      <div><b id="statOrbs">0</b><span>сфер</span></div>
+      <div><b id="statBest">0</b><span>рекорд</span></div>
+    </div>
+    <button id="againBtn" class="cta">ЕЩЁ РАЗ</button>
+    <button id="menuBtn" class="link-btn">В меню</button>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
