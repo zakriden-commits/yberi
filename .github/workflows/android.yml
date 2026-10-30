@@ -57,6 +57,18 @@ jobs:
           ls -lh out
           sha256sum out/*
 
+      - name: Проверить, что игра реально внутри APK
+        run: |
+          set -e
+          APK=out/turnikman.apk
+          unzip -l "$APK" | grep -q "assets/public/index.html" || { echo "✗ в APK нет веб-части"; exit 1; }
+          unzip -l "$APK" | grep -q "assets/public/app.js"      || { echo "✗ в APK нет app.js"; exit 1; }
+          unzip -l "$APK" | grep -q "assets/public/vendor/three.module.js" || { echo "✗ в APK нет three.js"; exit 1; }
+          unzip -l "$APK" | grep -q "classes.dex" || { echo "✗ в APK нет classes.dex"; exit 1; }
+          echo "✓ веб-часть и код на месте:"
+          unzip -l "$APK" | grep -E "assets/public/(index.html|app.js|styles.css|vendor)" | head -10
+          echo "✓ размер APK: $(du -h "$APK" | cut -f1)"
+
       - uses: actions/upload-artifact@v4
         with:
           name: turnikman-android
