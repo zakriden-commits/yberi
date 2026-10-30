@@ -11,8 +11,25 @@ import {
 } from './content.js';
 
 /* ------------------------------------------------------------------ save */
-let save = loadGame(localStorage);
-const persist = () => saveGame(save, localStorage);
+/* localStorage может быть недоступен (file://, приватный режим) — тогда держим прогресс в памяти */
+const store = (() => {
+  try {
+    const probe = '__turnikman_probe__';
+    localStorage.setItem(probe, '1');
+    localStorage.removeItem(probe);
+    return localStorage;
+  } catch {
+    const mem = new Map();
+    return {
+      getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+      setItem: (k, v) => mem.set(k, String(v)),
+      removeItem: (k) => mem.delete(k),
+    };
+  }
+})();
+
+let save = loadGame(store);
+const persist = () => saveGame(save, store);
 
 /* ------------------------------------------------------------------ ui */
 const $ = (id) => document.getElementById(id);
@@ -1033,7 +1050,7 @@ function bindUi() {
 
   $('resetBtn').addEventListener('click', () => {
     if (!confirm('Сбросить весь прогресс?')) return;
-    localStorage.removeItem('turnikman.save.v1');
+    store.removeItem('turnikman.save.v1');
     location.reload();
   });
 

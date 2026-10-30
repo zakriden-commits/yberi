@@ -8,9 +8,13 @@
     "serve": "node scripts/serve.cjs",
     "test": "node test/physics.test.mjs && node test/content.test.mjs && node test/headless.mjs",
     "test:unit": "node test/physics.test.mjs && node test/content.test.mjs",
-    "test:headless": "node test/headless.mjs"
+    "test:headless": "node test/headless.mjs",
+    "build": "node scripts/build-single.cjs"
   },
   "dependencies": {
     "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }
