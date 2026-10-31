@@ -1,0 +1,7 @@
+/* UI state helpers are kept separate from the scene renderer. */
+body[data-state='loading'] .menu-screen { opacity: 1; }
+body[data-state='loading'] .scene-stamp { opacity: .35; }
+body[data-state='paused'] .hud-actions { pointer-events: none; }
+body[data-state='paused'] .control-hint { opacity: 0; }
+body.drag-look #game { cursor: grab; }
+body.drag-look #game:active { cursor: grabbing; }
