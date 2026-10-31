@@ -40,7 +40,11 @@ jobs:
       - name: Build APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace > ../gradle.log 2>&1 || (tail -120 ../gradle.log; exit 1)
+          ./gradlew assembleDebug --no-daemon --stacktrace > ../gradle.log 2>&1 || {
+            tail -120 ../gradle.log
+            while IFS= read -r line; do echo "::error title=Gradle::$line"; done < <(tail -n 25 ../gradle.log)
+            exit 1
+          }
       - name: Commit APK to repo
         if: success()
         run: |
@@ -51,15 +55,4 @@ jobs:
           git add apk/DeniIslam-debug.apk
           git commit -m "Add debug APK [skip ci]" || true
           git push origin HEAD:arena/ac6d51f8-yberi
-      - name: Commit failure log
-        if: failure()
-        run: |
-          if [ -f gradle.log ]; then
-            mkdir -p ci-logs
-            tail -300 gradle.log > ci-logs/gradle.log
-            git config user.name "github-actions"
-            git config user.email "actions@github.com"
-            git add ci-logs/gradle.log
-            git commit -m "Add CI log [skip ci]" || true
-            git push origin HEAD:arena/ac6d51f8-yberi || true
-          fi
+      
