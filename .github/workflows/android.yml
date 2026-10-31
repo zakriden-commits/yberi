@@ -19,15 +19,28 @@ jobs:
       - name: Prepare Android SDK
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
-          if command -v sdkmanager >/dev/null 2>&1; then
-            yes | sdkmanager --licenses >/dev/null || true
-            sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          SDKMANAGER=$(find "$ANDROID_HOME" -name sdkmanager 2>/dev/null | head -1 || true)
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses >/dev/null || true
+            "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" || true
           fi
       - run: npm ci
       - run: npm run build
       - run: npx cap add android
       - run: npx cap sync android
-      - run: cd android && ./gradlew assembleDebug --no-daemon
+      - name: Configure Gradle
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          chmod +x android/gradlew
+      - name: Build APK
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon --stacktrace > ../gradle.log 2>&1 || (tail -120 ../gradle.log; exit 1)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-logs
+          path: gradle.log
       - uses: actions/upload-artifact@v4
         with:
           name: DeniIslam-debug-apk
