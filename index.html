@@ -3,51 +3,67 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
-<meta name="theme-color" content="#101418"/>
+<meta name="theme-color" content="#0b0e12"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <link rel="manifest" href="/manifest.webmanifest"/>
-<title>Deni Islam</title>
+<title>Deni Islam — Район</title>
 </head>
 <body>
 <canvas id="game"></canvas>
-<div id="vignette"></div>
-<div id="menu" class="screen">
-  <div class="menu-card">
-    <div class="logo">DENI <span>ISLAM</span></div>
-    <div class="tagline">Два друга. Один район. Большие планы.</div>
-    <button id="play" class="btn primary">ИГРАТЬ</button>
-    <button id="about" class="btn">ОБ ИГРЕ</button>
-    <button id="controlsBtn" class="btn">УПРАВЛЕНИЕ</button>
-    <label class="server-row">Сервер <input id="serverUrl" placeholder="auto"/></label>
-    <div class="hint">Онлайн на 2 игроков. Микрофон запрашивается при каждом входе.</div>
-  </div>
-</div>
-<div id="hud" hidden>
-  <div class="topbar">
-    <div class="stat"><span>HP</span><div class="bar"><i id="hp"></i></div></div>
-    <div class="stat"><span>STA</span><div class="bar"><i id="sta"></i></div></div>
-    <div id="money">$0</div>
-    <div id="wanted"></div>
-    <div id="voice" class="voice">🎤</div>
-  </div>
-  <div id="crosshair">+</div>
-  <div id="prompt" class="prompt"></div>
-  <div id="progress" class="progress" hidden><i></i><span></span></div>
-  <div id="hotbar" class="hotbar"></div>
-  <div id="mobile" class="mobile">
-    <div id="stick" class="stick"><i></i></div>
-    <div class="actions">
-      <button id="btnFire" class="round fire">ОГОНЬ</button>
-      <button id="btnReload" class="round">R</button>
-      <button id="btnUse" class="round">E</button>
-      <button id="btnSprint" class="round">БЕГ</button>
+<div id="grade"></div>
+<div id="damage"></div>
+
+<div id="loading" class="loading"><div class="load-logo">DENI <span>ISLAM</span></div><div class="load-bar"><i id="loadBar"></i></div><div id="loadText">Загрузка района…</div></div>
+
+<div id="menu" class="menu" hidden>
+  <div class="menu-panel">
+    <div class="eyebrow">КООПЕРАТИВНЫЙ КРИМИНАЛЬНЫЙ РАЙОН</div>
+    <h1 class="logo">DENI<br/><span>ISLAM</span></h1>
+    <p class="tagline">Два друга. Один дом. Большие планы.<br/>Заработай, снаряжайся и рискни ограбить «Север Банк».</p>
+    <div class="menu-buttons">
+      <button id="play" class="btn primary big"><span class="btn-icon">▶</span> ИГРАТЬ ОНЛАЙН</button>
+      <div class="btn-row"><button id="about" class="btn">ОБ ИГРЕ</button><button id="controlsBtn" class="btn">УПРАВЛЕНИЕ</button><button id="settingsBtn" class="btn">НАСТРОЙКИ</button></div>
     </div>
+    <div class="server-box"><label>СЕРВЕР</label><input id="serverUrl" placeholder="Автоматически" spellcheck="false"/><span id="serverStatus" class="status-dot"></span></div>
+    <div class="menu-meta"><span>2 ИГРОКА</span><span>ГОЛОСОВОЙ ЧАТ</span><span>СОХРАНЕНИЕ</span></div>
+    <div class="hint">Микрофон запрашивается при каждом входе. Можно играть без него.</div>
   </div>
-  <div id="toasts"></div>
+  <div class="menu-cards">
+    <div class="char-card"><div class="char-avatar gent">D</div><div><b>DENI</b><span>Джентльмен</span></div></div>
+    <div class="char-card"><div class="char-avatar gop">I</div><div><b>ISLAM</b><span>Гопник</span></div></div>
+  </div>
+  <div class="menu-footer">DENI ISLAM • РАЙОН • 0.2</div>
 </div>
-<div id="dialog" class="dialog" hidden><div class="dialog-card"><button id="dialogClose" class="close">×</button><div id="dialogBody"></div></div></div>
-<div id="fatal" class="screen" hidden><div class="menu-card"><div class="logo">Ошибка</div><p id="fatalText"></p><button class="btn primary" onclick="location.reload()">Заново</button></div></div>
+
+<div id="hud" class="hud" hidden>
+  <div class="hud-top">
+    <div class="player-card">
+      <div id="avatar" class="avatar">D</div>
+      <div class="player-info"><div class="player-name"><span id="playerName">DENI</span><span id="playerRole">ДЖЕНТЛЬМЕН</span></div>
+        <div class="vitals"><div class="vital hp"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5.3-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.7-8 11-8 11z"/></svg><div class="bar"><i id="hp"></i></div><span id="hpText">100</span></div>
+        <div class="vital sta"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg><div class="bar"><i id="sta"></i></div><span id="staText">100</span></div></div>
+      </div>
+    </div>
+    <div class="wanted-box"><div id="wanted" class="stars"></div><div id="wantedLabel" class="wanted-label">РОЗЫСК</div></div>
+    <div class="right-cluster"><div class="money-box"><span class="money-label">БАЛАНС</span><b id="money">$0</b></div><canvas id="minimap" width="160" height="160"></canvas><div id="voice" class="voice" title="Голосовой чат"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11h-2z"/></svg></div><button id="pauseBtn" class="icon-btn" title="Пауза">II</button></div>
+  </div>
+  <div id="objective" class="objective" hidden><span class="obj-tag">ЗАДАЧА</span><span id="objectiveText"></span></div>
+  <div id="crosshair" class="crosshair"><i></i><i></i><i></i><i></i></div>
+  <div id="prompt" class="prompt" hidden><span id="promptKey" class="key">E</span><span id="promptText"></span><div id="holdRing" class="hold-ring" hidden><i></i></div></div>
+  <div id="progress" class="progress" hidden><div class="progress-head"><span id="progressText"></span><b id="progressPct"></b></div><div class="progress-bar"><i></i></div></div>
+  <div class="bottom-hud"><div id="weaponInfo" class="weapon-info"><span id="weaponName">КУЛАКИ</span><b id="ammoCount"></b></div><div id="hotbar" class="hotbar"></div></div>
+  <div id="mobile" class="mobile">
+    <div id="stick" class="stick"><div class="stick-ring"></div><i></i></div>
+    <div class="actions"><button id="btnFire" class="round fire"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button><button id="btnReload" class="round"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button><button id="btnUse" class="round use">E</button><button id="btnSprint" class="round"><svg viewBox="0 0 24 24"><path d="M13 4a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm-3 16 2-6-3-3 1-5 4 2 3 1m-6 2-2 3m6-1 3 4m-9-9-4 2"/></svg></button></div>
+  </div>
+  <div id="toasts" class="toasts"></div>
+</div>
+
+<div id="dialog" class="dialog" hidden><div class="dialog-card"><div class="dialog-head"><h2 id="dialogTitle"></h2><button id="dialogClose" class="close">×</button></div><div id="dialogBody" class="dialog-body"></div></div></div>
+<div id="pause" class="pause" hidden><div class="pause-card"><h2>ПАУЗА</h2><button id="resumeBtn" class="btn primary">ПРОДОЛЖИТЬ</button><button id="pauseSettings" class="btn">НАСТРОЙКИ</button><button id="quitBtn" class="btn danger">ВЫЙТИ В МЕНЮ</button></div></div>
+<div id="death" class="death" hidden><div class="death-card"><h2>ТЫ ВЫБЫЛ</h2><p>Инвентарь потерян. Возвращение в убежище…</p></div></div>
+<div id="fatal" class="fatal" hidden><div class="fatal-card"><h2>ОШИБКА</h2><p id="fatalText"></p><button class="btn primary" onclick="location.reload()">ЗАНОВО</button></div></div>
 <script type="module" src="/src/main.js"></script>
 </body>
 </html>

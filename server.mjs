@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import sirv from 'sirv';
-import { ROOM_SIZE, TICK_MS, SNAPSHOT_MS, HOUSE, BANK, SHOP, TRUCK, CASH_POINTS, WARDROBES, BEDS, PRICES, AMMO_PACK, WEAPONS, STORAGE_SIZE, HOTBAR_SIZE, inZone, dist2 } from './src/shared/constants.js';
+import { TICK_MS, SNAPSHOT_MS, HOUSE, BANK, SHOP, TRUCK, CASH_POINTS, WARDROBES, BEDS, PRICES, AMMO_PACK, WEAPONS, STORAGE_SIZE, HOTBAR_SIZE, inZone, dist2 } from './src/shared/constants.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SAVE_PATH = path.join(__dirname, 'data', 'save.json');
@@ -182,9 +182,12 @@ function buy(p, item) {
   const price = PRICES[item];
   if (!price) return;
   if (p.balance < price) { event(p, 'toast', { text: 'Недостаточно денег' }); return; }
-  if (item === 'ammo') { p.balance -= price; const existing = p.inventory.find(i => i.type === 'ammo'); if (existing) existing.count += AMMO_PACK; else addItem(p, { type: 'ammo', count: AMMO_PACK }); }
-  else if (item === 'bag') { p.balance -= price; addItem(p, { type: 'bag', bagCash: 0 }); }
-  else if (WEAPONS[item]) { p.balance -= price; addItem(p, { type: item, mag: 0 }); }
+  const existingAmmo = item === 'ammo' ? p.inventory.find(i => i.type === 'ammo') : null;
+  if (p.inventory.length >= HOTBAR_SIZE && !(item === 'ammo' && existingAmmo)) { event(p, 'toast', { text: 'Инвентарь полон' }); return; }
+  p.balance -= price;
+  if (item === 'ammo') { if (existingAmmo) existingAmmo.count += AMMO_PACK; else addItem(p, { type: 'ammo', count: AMMO_PACK }); }
+  else if (item === 'bag') addItem(p, { type: 'bag', bagCash: 0 });
+  else if (WEAPONS[item]) addItem(p, { type: item, mag: 0 });
   event(p, 'inventory', { inventory: p.inventory, balance: p.balance }); event(p, 'shop', { balance: p.balance }); saveProfile(p);
 }
 function deposit(p, index, amount) {
@@ -357,4 +360,7 @@ wss.on('connection', ws => {
   });
   ws.on('close', () => { if (player) { saveProfile(player); players.delete(ws); slots[player.slot] = null; broadcast({ type: 'event', kind: 'toast', text: `${player.name} вышел` }); } });
 });
+function persistNow() { try { fs.mkdirSync(path.dirname(SAVE_PATH), { recursive: true }); fs.writeFileSync(SAVE_PATH, JSON.stringify(save)); } catch (e) { console.error('persist', e); } }
+process.on('SIGTERM', () => { for (const p of players.values()) saveProfile(p); persistNow(); process.exit(0); });
+process.on('SIGINT', () => { for (const p of players.values()) saveProfile(p); persistNow(); process.exit(0); });
 server.listen(PORT, '0.0.0.0', () => console.log(`Deni Islam server on http://0.0.0.0:${PORT} (${DEV ? 'dev' : 'prod'})`));

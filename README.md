@@ -1,6 +1,6 @@
 # Deni Islam
 
-Кооперативная 3D-онлайн-игра на **2 игроков** для браузера, iPhone (PWA) и Android (APK через GitHub Actions).
+Кооперативная 3D-онлайн-игра на **2 игроков** для браузера, iPhone (PWA) и Android (APK через GitHub Actions). Версия 0.2 — «Район»: PBR-материалы, детализированные здания, анимированные персонажи, новый интерфейс.
 
 ## Запуск локально
 
@@ -43,4 +43,11 @@ npm run build
 npm start
 ```
 
-APK собирается в GitHub Actions: `.github/workflows/android.yml`.
+APK собирается в GitHub Actions: `.github/workflows/android.yml`. Готовый файл: `apk/DeniIslam-debug.apk`.
+
+## Графика и ассеты
+
+- Движок: Babylon.js (PBR, тени, bloom, glow, туман, постобработка).
+- Процедурные текстуры и модели оружия/предметов: `src/gfx/`.
+- Анимированные персонажи: Quaternius (CC0). Городские модели: Kenney (MIT). Карта окружения: Babylon.js Assets (MIT).
+- Подробные лицензии: `public/assets/ATTRIBUTION.md`.

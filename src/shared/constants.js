@@ -20,5 +20,12 @@ export const WEAPONS = {
 };
 export const STORAGE_SIZE = 15;
 export const HOTBAR_SIZE = 6;
+export const SHOP_ITEMS = [
+  { id: 'pistol', name: 'Пистолет «Грач»', desc: 'Компактный полуавтомат. Магазин 12 патронов. Надёжен и дёшев.', price: PRICES.pistol, stats: { Урон: 25, Скорость: '3/с', Магазин: 12 } },
+  { id: 'smg', name: 'ПП «Кедр»', desc: 'Скорострельный пистолет-пулемёт. Магазин 30. Хорош в ближнем бою.', price: PRICES.smg, stats: { Урон: 18, Скорость: '9/с', Магазин: 30 } },
+  { id: 'rifle', name: 'Винтовка «Тигр»', desc: 'Снайперская винтовка с оптикой. Магазин 10. Бьёт далеко и больно.', price: PRICES.rifle, stats: { Урон: 55, Скорость: '1.4/с', Магазин: 10 } },
+  { id: 'bag', name: 'Спортивная сумка', desc: 'Вмещает крупную наличность. С ней кража из банка занимает 30 с, но приносит больше.', price: PRICES.bag },
+  { id: 'ammo', name: 'Патроны ×30', desc: 'Универсальная коробка патронов. Продаётся отдельно от оружия.', price: PRICES.ammo },
+];
 export function inZone(p, z) { return p.x >= z.minX && p.x <= z.maxX && p.z >= z.minZ && p.z <= z.maxZ; }
 export function dist2(a, b) { return Math.hypot(a.x - b.x, a.z - b.z); }

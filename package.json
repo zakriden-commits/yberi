@@ -1,7 +1,7 @@
 {
   "name": "deni-islam",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",
@@ -12,9 +12,10 @@
   },
   "dependencies": {
     "@babylonjs/core": "^9.33.1",
+    "@babylonjs/loaders": "^9.33.1",
     "@capacitor/android": "^7.4.3",
-    "@capacitor/core": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
     "sirv": "^3.0.2",
     "ws": "^8.18.3"
   },

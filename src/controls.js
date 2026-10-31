@@ -5,7 +5,7 @@ export class Controls {
     addEventListener('keydown', e => { this.keys.add(e.code); if (e.code === 'KeyE') { this.useHeld = true; this.usePressed = true; } if (e.code === 'KeyR') this.reloadPressed = true; if (e.code === 'ShiftLeft') this.sprint = true; });
     addEventListener('keyup', e => { this.keys.delete(e.code); if (e.code === 'KeyE') this.useHeld = false; if (e.code === 'ShiftLeft') this.sprint = false; });
     canvas.addEventListener('click', () => { if (!this.touch && document.pointerLockElement !== canvas) canvas.requestPointerLock?.(); });
-    addEventListener('mousemove', e => { if (document.pointerLockElement === canvas) { this.yaw += e.movementX * .0022; this.pitch = Math.max(-1.3, Math.min(1.3, this.pitch + e.movementY * .0022)); } });
+    addEventListener('mousemove', e => { if (document.pointerLockElement === canvas) { this.yaw += e.movementX * .0022 * (this.sens || 1); this.pitch = Math.max(-1.3, Math.min(1.3, this.pitch + e.movementY * .0022 * (this.sens || 1))); } });
     addEventListener('mousedown', e => { if (document.pointerLockElement === canvas && e.button === 0) this.fire = true; });
     addEventListener('mouseup', e => { if (e.button === 0) this.fire = false; });
     const stick = document.getElementById('stick'), knob = stick.querySelector('i'); let sid = null, sx = 0, sy = 0;
@@ -15,7 +15,7 @@ export class Controls {
     stick.addEventListener('pointerup', end); stick.addEventListener('pointercancel', end);
     let lid = null, lx = 0, ly = 0;
     canvas.addEventListener('pointerdown', e => { if (!this.touch || e.clientX < innerWidth * .45) return; lid = e.pointerId; lx = e.clientX; ly = e.clientY; canvas.setPointerCapture(lid); });
-    canvas.addEventListener('pointermove', e => { if (e.pointerId !== lid) return; this.yaw += (e.clientX - lx) * .004; this.pitch = Math.max(-1.3, Math.min(1.3, this.pitch + (e.clientY - ly) * .004)); lx = e.clientX; ly = e.clientY; });
+    canvas.addEventListener('pointermove', e => { if (e.pointerId !== lid) return; this.yaw += (e.clientX - lx) * .004 * (this.sens || 1); this.pitch = Math.max(-1.3, Math.min(1.3, this.pitch + (e.clientY - ly) * .004 * (this.sens || 1))); lx = e.clientX; ly = e.clientY; });
     canvas.addEventListener('pointerup', e => { if (e.pointerId === lid) lid = null; });
     const bind = (id, down, up) => { const el = document.getElementById(id); el.addEventListener('pointerdown', e => { e.preventDefault(); down(); }); el.addEventListener('pointerup', e => { e.preventDefault(); up?.(); }); el.addEventListener('pointercancel', () => up?.()); };
     bind('btnFire', () => this.fire = true, () => this.fire = false);
