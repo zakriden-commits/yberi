@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#101418"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<link rel="manifest" href="/manifest.webmanifest"/>
+<title>Deni Islam</title>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="vignette"></div>
+<div id="menu" class="screen">
+  <div class="menu-card">
+    <div class="logo">DENI <span>ISLAM</span></div>
+    <div class="tagline">Два друга. Один район. Большие планы.</div>
+    <button id="play" class="btn primary">ИГРАТЬ</button>
+    <button id="about" class="btn">ОБ ИГРЕ</button>
+    <button id="controlsBtn" class="btn">УПРАВЛЕНИЕ</button>
+    <label class="server-row">Сервер <input id="serverUrl" placeholder="auto"/></label>
+    <div class="hint">Онлайн на 2 игроков. Микрофон запрашивается при каждом входе.</div>
+  </div>
+</div>
+<div id="hud" hidden>
+  <div class="topbar">
+    <div class="stat"><span>HP</span><div class="bar"><i id="hp"></i></div></div>
+    <div class="stat"><span>STA</span><div class="bar"><i id="sta"></i></div></div>
+    <div id="money">$0</div>
+    <div id="wanted"></div>
+    <div id="voice" class="voice">🎤</div>
+  </div>
+  <div id="crosshair">+</div>
+  <div id="prompt" class="prompt"></div>
+  <div id="progress" class="progress" hidden><i></i><span></span></div>
+  <div id="hotbar" class="hotbar"></div>
+  <div id="mobile" class="mobile">
+    <div id="stick" class="stick"><i></i></div>
+    <div class="actions">
+      <button id="btnFire" class="round fire">ОГОНЬ</button>
+      <button id="btnReload" class="round">R</button>
+      <button id="btnUse" class="round">E</button>
+      <button id="btnSprint" class="round">БЕГ</button>
+    </div>
+  </div>
+  <div id="toasts"></div>
+</div>
+<div id="dialog" class="dialog" hidden><div class="dialog-card"><button id="dialogClose" class="close">×</button><div id="dialogBody"></div></div></div>
+<div id="fatal" class="screen" hidden><div class="menu-card"><div class="logo">Ошибка</div><p id="fatalText"></p><button class="btn primary" onclick="location.reload()">Заново</button></div></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

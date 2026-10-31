@@ -1,0 +1,8 @@
+node_modules/
+dist/
+data/save.json
+android/
+ios/
+.qa/
+test-results/
+*.log

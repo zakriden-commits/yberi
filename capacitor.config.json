@@ -1,0 +1,7 @@
+{
+  "appId": "com.deniislam.game",
+  "appName": "Deni Islam",
+  "webDir": "dist",
+  "android": { "allowMixedContent": true },
+  "server": { "androidScheme": "https" }
+}
