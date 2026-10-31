@@ -32,10 +32,20 @@ jobs:
         run: |
           echo "sdk.dir=$ANDROID_HOME" > android/local.properties
           chmod +x android/gradlew
+          sed -i 's/gradle-8.11.1-all.zip/gradle-8.11.1-bin.zip/' android/gradle/wrapper/gradle-wrapper.properties
       - name: Build APK
         run: |
           cd android
           ./gradlew assembleDebug --no-daemon --stacktrace > ../gradle.log 2>&1 || (tail -120 ../gradle.log; exit 1)
+      - name: Report failure to commit comment
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f gradle.log ]; then
+            node -e "const fs=require('fs');const body='Gradle log tail:\\n\\n```\\n'+fs.readFileSync('gradle.log','utf8').slice(-50000)+'\\n```';fs.writeFileSync('comment.json',JSON.stringify({body}))"
+            gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" --input comment.json || true
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
