@@ -8,8 +8,8 @@ import { buildWorld } from './world.js';
 import { Controls } from './controls.js';
 import { UI } from './ui.js';
 import { AudioBus } from './audio.js';
-import { connect, send } from './net.js';
-import { startVoice } from './voice.js';
+import { connect, send, getServerBase } from './net.js';
+import { startVoice, requestMicrophone } from './voice.js';
 import { EYE, PLAYER_SPEED, SPRINT_MULT, HOUSE, BANK, SHOP, TRUCK, CASH_POINTS, WARDROBES, WEAPONS, HOTBAR_SIZE, inZone, dist2 } from './shared/constants.js';
 
 const ui = new UI(); const audio = new AudioBus();
@@ -27,7 +27,7 @@ const pipeline = new DefaultRenderingPipeline('pipeline', true, scene, [camera])
 const glow = new GlowLayer('glow', scene, { blurKernelSize: 32 }); glow.intensity = .5;
 const M = createMaterials(scene);
 const controls = new Controls(canvas); controls.sens = settings.sens;
-let world = null, mode = 'menu', ws = null, voice = null, myId = null, slot = 0, state = null, inventory = { items: [{ type: 'fists' }] }, balance = 0, storage = [], selected = 0, houseDoorOpen = true, dialogOpen = false, paused = false, stealing = false, lastFire = 0, lastStep = 0, lastAlarm = 0, spawnStart = 0, crateMesh = null;
+let world = null, mode = 'menu', ws = null, voice = null, connecting = false, connAttempt = 0, connGeneration = 0, reconnectTimer = null, micPromise = null, myId = null, slot = 0, state = null, inventory = { items: [{ type: 'fists' }] }, balance = 0, storage = [], selected = 0, houseDoorOpen = true, dialogOpen = false, paused = false, stealing = false, lastFire = 0, lastStep = 0, lastAlarm = 0, spawnStart = 0, crateMesh = null;
 const actors = new Map(); let vmRoot = null, vmType = null, muzzle = null, recoil = 0, bob = 0;
 const pos = { x: -3.2, z: 0, y: EYE };
 
@@ -92,6 +92,7 @@ function handleEvent(e) {
   if (e.kind === 'policeShot') audio.shot('pistol');
   if (e.kind === 'alarm') { ui.toast('ТРЕВОГА! ' + (e.reason === 'cashier' ? 'Кассир нажал кнопку' : 'Охрана подняла тревогу'), 'error'); audio.alarm(); }
   if (e.kind === 'door') { houseDoorOpen = e.open; world?.setHouseDoor(e.open); audio.door(); }
+  if (e.kind === 'peerJoined') voice?.offer();
   if (e.kind === 'death') { ui.damage(); audio.hit(); ui.death(true); setTimeout(() => ui.death(false), 2500); inventory = { items: [{ type: 'fists' }] }; selected = 0; setViewmodel('fists'); refreshHotbar(); }
 }
 function onMessage(msg) {
@@ -101,10 +102,11 @@ function onMessage(msg) {
     controls.yaw = 0; controls.pitch = 0; camera.rotation.set(0, 0, 0);
     if (!controls.touch) ui.toast('Кликни по экрану, чтобы захватить мышь');
     audio.init(); audio.setVolume(settings.vol);
-    startVoice(ws, slot, s => ui.voice(s === 'on')).then(v => voice = v);
+    document.getElementById('play').disabled = false;
+    startVoice(ws, slot, s => ui.voice(s === 'on'), micPromise).then(v => voice = v);
     ui.toast(slot === 0 ? 'Ты — Deni, джентльмен. Просыпайся.' : 'Ты — Islam, гопник. Подъём.');
   }
-  if (msg.type === 'full') { ui.fatal('Сервер заполнен: уже два игрока онлайн.'); ws?.close(); }
+  if (msg.type === 'full') { ui.toast('Сервер заполнен: уже два игрока онлайн.', 'error'); }
   if (msg.type === 'snapshot') syncSnapshot(msg);
   if (msg.type === 'event') handleEvent(msg);
   if (msg.type === 'inventory') { inventory = { items: msg.inventory }; balance = msg.balance; selected = Math.min(selected, inventory.items.length - 1); setViewmodel(inventory.items[selected]?.type || 'fists'); refreshHotbar(); }
@@ -121,16 +123,59 @@ function interact() {
   if (t) { if (t.type === 'cash') return; send(ws, { type: 'interact' }); if (t.type === 'wardrobe') setTimeout(() => { if (!dialogOpen) openDialog(() => ui.storage(inventory, storage, transfer)); }, 120); return; }
   const it = inventory.items[selected]; if (it && (it.type === 'cash' || it.type === 'bag')) openItem();
 }
-async function play() {
-  if (mode === 'game') return; audio.init();
-  const url = document.getElementById('serverUrl').value.trim(); if (url) localStorage.setItem('di_server', url);
-  let token = localStorage.getItem('di_token'); if (!token) { token = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('di_token', token); }
-  ui.loading(70, 'Подключение к району…');
-  ws = connect(token, url); ws.onmessage = ev => { try { onMessage(JSON.parse(ev.data)); } catch (e) { console.error(e); } };
-  ws.addEventListener('open', () => ui.loading(90, 'Вход…')); ws.onerror = () => { ui.loading(100, ''); ui.el.loading.hidden = true; ui.toast('Не удалось подключиться к серверу', 'error'); };
-  ws.onclose = () => { if (mode === 'game') { mode = 'menu'; ui.showMenu(); ui.toast('Соединение закрыто'); voice?.stop(); } };
+let connBase = '', connTokenValue = '';
+function connectionFailed(message) {
+  connecting = false; mode = 'menu'; clearTimeout(reconnectTimer);
+  document.getElementById('play').disabled = false;
+  ui.showMenu(); ui.toast(message, 'error');
+  const dot = document.getElementById('serverStatus'); if (dot) { dot.style.background = 'var(--red)'; dot.style.boxShadow = '0 0 10px var(--red)'; }
 }
-function quit() { ws?.close(); voice?.stop(); mode = 'menu'; paused = false; ui.showMenu(); document.exitPointerLock?.(); }
+function tryConnect() {
+  const gen = ++connGeneration; clearTimeout(reconnectTimer);
+  ui.loading(70, connAttempt ? 'Переподключение к серверу…' : 'Подключение к единому серверу…');
+  let socket;
+  try { socket = connect(connTokenValue, connBase); } catch (e) { connectionFailed(e.message); return; }
+  ws = socket;
+  let welcomed = false, full = false;
+  const timeout = setTimeout(() => { if (!welcomed && ws === socket) socket.close(); }, 12000);
+  socket.onmessage = ev => {
+    if (ws !== socket) return;
+    let msg; try { msg = JSON.parse(ev.data); } catch { return; }
+    if (msg.type === 'welcome') { welcomed = true; connecting = false; connAttempt = 0; clearTimeout(timeout); const dot = document.getElementById('serverStatus'); if (dot) { dot.style.background = 'var(--green)'; dot.style.boxShadow = '0 0 10px var(--green)'; } }
+    if (msg.type === 'full') full = true;
+    try { onMessage(msg); } catch (e) { console.error(e); }
+  };
+  socket.onerror = () => {};
+  socket.onclose = () => {
+    clearTimeout(timeout); if (ws !== socket || gen !== connGeneration) return;
+    voice?.stop(); voice = null; ui.voice(false);
+    if (full) { connectionFailed('Сервер заполнен: уже два игрока онлайн. Попробуй позже.'); return; }
+    const wasInGame = welcomed || mode === 'game';
+    const max = wasInGame ? 6 : 3;
+    if (connAttempt < max) {
+      connAttempt++; mode = 'menu'; ui.el.hud.hidden = true;
+      ui.loading(65, wasInGame ? `Связь потеряна. Переподключение ${connAttempt}/${max}…` : `Сервер не ответил. Повтор ${connAttempt}/${max}…`);
+      reconnectTimer = setTimeout(tryConnect, 1200);
+    } else connectionFailed(wasInGame ? 'Соединение с сервером потеряно. Нажми «Играть онлайн», чтобы войти снова.' : 'Не удалось подключиться к игровому серверу. Проверь интернет или попробуй позже.');
+  };
+}
+async function play() {
+  if (mode === 'game' || connecting) return;
+  connecting = true; connAttempt = 0; document.getElementById('play').disabled = true;
+  audio.init(); micPromise = requestMicrophone();
+  ui.loading(55, 'Запрос микрофона и подключение…');
+  connTokenValue = localStorage.getItem('di_token');
+  if (!connTokenValue) { connTokenValue = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); localStorage.setItem('di_token', connTokenValue); }
+  try { connBase = await getServerBase(); } catch (e) { connectionFailed(e.message); return; }
+  tryConnect();
+}
+function quit() {
+  connGeneration++; clearTimeout(reconnectTimer); connecting = false;
+  ws?.close(); ws = null; voice?.stop(); voice = null;
+  micPromise?.then(s => s?.getTracks().forEach(t => t.stop())); micPromise = null;
+  mode = 'menu'; paused = false; document.getElementById('play').disabled = false;
+  ui.showMenu(); document.exitPointerLock?.();
+}
 
 document.getElementById('play').onclick = play;
 document.getElementById('about').onclick = () => ui.about();
@@ -140,7 +185,7 @@ document.getElementById('pauseBtn').onclick = () => { paused = true; ui.el.pause
 document.getElementById('resumeBtn').onclick = () => { paused = false; ui.el.pause.hidden = true; if (!controls.touch) canvas.requestPointerLock?.(); };
 document.getElementById('pauseSettings').onclick = () => ui.settings(settings, s => { Object.assign(settings, s); saveSettings(); audio.setVolume(settings.vol); });
 document.getElementById('quitBtn').onclick = quit;
-document.getElementById('serverUrl').value = localStorage.getItem('di_server') || '';
+localStorage.removeItem('di_server');
 addEventListener('keydown', e => {
   if (mode !== 'game') return;
   if (e.code === 'Escape') { if (dialogOpen) ui.closeDialog(); else { paused = !paused; ui.el.pause.hidden = !paused; if (paused) document.exitPointerLock?.(); else if (!controls.touch) canvas.requestPointerLock?.(); } }

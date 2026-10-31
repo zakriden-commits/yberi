@@ -6,3 +6,5 @@ ios/
 .qa/
 test-results/
 *.log
+
+public/server-config.json

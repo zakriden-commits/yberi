@@ -1,13 +1,13 @@
 {
   "name": "deni-islam",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",
-    "build": "vite build",
+    "build": "node scripts/write-server-config.mjs && vite build",
     "start": "NODE_ENV=production node server.mjs",
-    "cap:sync": "npm run build && cap sync",
+    "cap:sync": "npm run build && cap sync android && node scripts/configure-android.mjs",
     "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {

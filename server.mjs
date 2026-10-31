@@ -311,17 +311,31 @@ setInterval(() => { for (const p of players.values()) saveProfile(p); }, 15000);
 
 const handler = DEV ? null : sirv(path.join(__dirname, 'dist'), { single: true });
 let vite;
-const server = http.createServer((req, res) => { if (vite) vite.middlewares(req, res); else if (handler) handler(req, res); else { res.writeHead(404); res.end(); } });
+function publicServerUrl() {
+  if (process.env.GAME_SERVER_URL) return process.env.GAME_SERVER_URL.replace(/\/$/, '');
+  if (process.env.E2B_SANDBOX_ID) return `https://${PORT}-${process.env.E2B_SANDBOX_ID}.e2b.app`;
+  return '';
+}
+const server = http.createServer((req, res) => {
+  const pathname = (req.url || '/').split('?')[0];
+  if (pathname === '/server-config.json') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }); res.end(JSON.stringify({ serverUrl: publicServerUrl(), room: 'district-1', maxPlayers: 2 })); return; }
+  if (pathname === '/healthz') { res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(JSON.stringify({ ok: true, players: players.size, maxPlayers: 2 })); return; }
+  if (vite) vite.middlewares(req, res); else if (handler) handler(req, res); else { res.writeHead(404); res.end(); }
+});
 if (DEV) {
   const { createServer } = await import('vite');
   vite = await createServer({ server: { middlewareMode: true, hmr: { server } }, appType: 'spa' });
 }
 const wss = new WebSocketServer({ noServer: true });
+const heartbeat = setInterval(() => { for (const ws of wss.clients) { if (ws.isAlive === false) { ws.terminate(); continue; } ws.isAlive = false; ws.ping(); } }, 15000);
+wss.on('close', () => clearInterval(heartbeat));
 server.on('upgrade', (req, socket, head) => {
   if (req.url.startsWith('/game')) wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
 });
 wss.on('connection', ws => {
   let player = null;
+  ws.isAlive = true; ws.on('pong', () => { ws.isAlive = true; });
+  ws.on('error', () => {});
   ws.on('message', raw => {
     let msg; try { msg = JSON.parse(raw); } catch { return; }
     if (msg.type === 'join') {
@@ -336,6 +350,7 @@ wss.on('connection', ws => {
       players.set(ws, player); slots[slot] = player.id;
       send(ws, { type: 'welcome', id: player.id, slot, player: publicPlayer(player), inventory: player.inventory, storage: save.storage, balance: player.balance });
       broadcast({ type: 'event', kind: 'toast', text: `${player.name} в сети` });
+      for (const other of players.values()) if (other !== player) send(other.ws, { type: 'event', kind: 'peerJoined', slot });
       return;
     }
     if (!player) return;

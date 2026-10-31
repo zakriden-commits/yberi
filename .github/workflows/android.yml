@@ -30,8 +30,11 @@ jobs:
           fi
       - run: npm ci
       - run: npm run build
+        env:
+          GAME_SERVER_URL: ${{ vars.GAME_SERVER_URL || 'https://3000-ifse5e767xfdvue6xnnvy.e2b.app' }}
       - run: npx cap add android
       - run: npx cap sync android
+      - run: node scripts/configure-android.mjs
       - name: Configure Gradle
         run: |
           echo "sdk.dir=$ANDROID_HOME" > android/local.properties
