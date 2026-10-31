@@ -3,11 +3,15 @@ on:
   push:
     branches: [arena/ac6d51f8-yberi]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -37,21 +41,25 @@ jobs:
         run: |
           cd android
           ./gradlew assembleDebug --no-daemon --stacktrace > ../gradle.log 2>&1 || (tail -120 ../gradle.log; exit 1)
-      - name: Report failure to commit comment
+      - name: Commit APK to repo
+        if: success()
+        run: |
+          mkdir -p apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk apk/DeniIslam-debug.apk
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add apk/DeniIslam-debug.apk
+          git commit -m "Add debug APK [skip ci]" || true
+          git push origin HEAD:arena/ac6d51f8-yberi
+      - name: Commit failure log
         if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -f gradle.log ]; then
-            node -e "const fs=require('fs');const body='Gradle log tail:\\n\\n```\\n'+fs.readFileSync('gradle.log','utf8').slice(-50000)+'\\n```';fs.writeFileSync('comment.json',JSON.stringify({body}))"
-            gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" --input comment.json || true
+            mkdir -p ci-logs
+            tail -300 gradle.log > ci-logs/gradle.log
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            git add ci-logs/gradle.log
+            git commit -m "Add CI log [skip ci]" || true
+            git push origin HEAD:arena/ac6d51f8-yberi || true
           fi
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: build-logs
-          path: gradle.log
-      - uses: actions/upload-artifact@v4
-        with:
-          name: DeniIslam-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
