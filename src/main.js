@@ -8,7 +8,7 @@ import { buildWorld } from './world.js';
 import { Controls } from './controls.js';
 import { UI } from './ui.js';
 import { AudioBus } from './audio.js';
-import { connect, send, getServerBase } from './net.js';
+import { openGame, send } from './net.js';
 import { startVoice, requestMicrophone } from './voice.js';
 import { EYE, PLAYER_SPEED, SPRINT_MULT, HOUSE, BANK, SHOP, TRUCK, CASH_POINTS, WARDROBES, WEAPONS, HOTBAR_SIZE, inZone, dist2 } from './shared/constants.js';
 
@@ -92,6 +92,11 @@ function handleEvent(e) {
   if (e.kind === 'policeShot') audio.shot('pistol');
   if (e.kind === 'alarm') { ui.toast('ТРЕВОГА! ' + (e.reason === 'cashier' ? 'Кассир нажал кнопку' : 'Охрана подняла тревогу'), 'error'); audio.alarm(); }
   if (e.kind === 'door') { houseDoorOpen = e.open; world?.setHouseDoor(e.open); audio.door(); }
+  if (e.kind === 'playerJoined') {
+    ui.online?.(e.online); ui.toast(e.text, 'success', 6500); audio.pickup();
+    if (e.slot !== slot) voice?.offer();
+  }
+  if (e.kind === 'playerLeft') { ui.online?.(e.online); ui.toast(e.text); }
   if (e.kind === 'peerJoined') voice?.offer();
   if (e.kind === 'death') { ui.damage(); audio.hit(); ui.death(true); setTimeout(() => ui.death(false), 2500); inventory = { items: [{ type: 'fists' }] }; selected = 0; setViewmodel('fists'); refreshHotbar(); }
 }
@@ -103,8 +108,9 @@ function onMessage(msg) {
     if (!controls.touch) ui.toast('Кликни по экрану, чтобы захватить мышь');
     audio.init(); audio.setVolume(settings.vol);
     document.getElementById('play').disabled = false;
-    startVoice(ws, slot, s => ui.voice(s === 'on'), micPromise).then(v => voice = v);
-    ui.toast(slot === 0 ? 'Ты — Deni, джентльмен. Просыпайся.' : 'Ты — Islam, гопник. Подъём.');
+    startVoice(ws, slot, s => ui.voice(s === 'on'), micPromise).then(v => { voice = v; const q = pendingSignals.splice(0); for (const data of q) v.handle(data); });
+    ui.online?.(msg.online || 1);
+    ui.toast(msg.resume ? 'Соединение восстановлено. Ты снова в игре.' : (msg.online > 1 ? `Ты — игрок ${slot + 1}. Второй игрок уже в мире.` : `Ты — игрок ${slot + 1}. Можно играть одному; друг подключится позже.`), 'success');
   }
   if (msg.type === 'full') { ui.toast('Сервер заполнен: уже два игрока онлайн.', 'error'); }
   if (msg.type === 'snapshot') syncSnapshot(msg);
@@ -113,7 +119,7 @@ function onMessage(msg) {
   if (msg.type === 'storage') { storage = msg.storage; if (dialogOpen) ui.storage(inventory, storage, transfer); }
   if (msg.type === 'shop') { openDialog(() => ui.shop(msg.balance, buy)); }
   if (msg.type === 'jobOffer') { openDialog(() => ui.jobOffer({ text: msg.text, reward: '60–700', total: 1 }, () => send(ws, { type: 'jobAccept' }))); }
-  if (msg.type === 'signal') voice?.handle(msg.data);
+  if (msg.type === 'signal') { if (voice) voice.handle(msg.data); else pendingSignals.push(msg.data); }
 }
 function buy(item) { send(ws, { type: 'buy', item }); audio.buy(); }
 function transfer(from, i) { send(ws, { type: from === 'inv' ? 'storagePut' : 'storageTake', index: i }); }
@@ -123,41 +129,44 @@ function interact() {
   if (t) { if (t.type === 'cash') return; send(ws, { type: 'interact' }); if (t.type === 'wardrobe') setTimeout(() => { if (!dialogOpen) openDialog(() => ui.storage(inventory, storage, transfer)); }, 120); return; }
   const it = inventory.items[selected]; if (it && (it.type === 'cash' || it.type === 'bag')) openItem();
 }
-let connBase = '', connTokenValue = '';
+let connTokenValue = ''; const pendingSignals = []; let lastNetInput = 0;
 function connectionFailed(message) {
   connecting = false; mode = 'menu'; clearTimeout(reconnectTimer);
   document.getElementById('play').disabled = false;
   ui.showMenu(); ui.toast(message, 'error');
   const dot = document.getElementById('serverStatus'); if (dot) { dot.style.background = 'var(--red)'; dot.style.boxShadow = '0 0 10px var(--red)'; }
 }
-function tryConnect() {
+async function tryConnect() {
   const gen = ++connGeneration; clearTimeout(reconnectTimer);
   ui.loading(70, connAttempt ? 'Переподключение к серверу…' : 'Подключение к единому серверу…');
-  let socket;
-  try { socket = connect(connTokenValue, connBase); } catch (e) { connectionFailed(e.message); return; }
-  ws = socket;
-  let welcomed = false, full = false;
-  const timeout = setTimeout(() => { if (!welcomed && ws === socket) socket.close(); }, 12000);
-  socket.onmessage = ev => {
-    if (ws !== socket) return;
-    let msg; try { msg = JSON.parse(ev.data); } catch { return; }
-    if (msg.type === 'welcome') { welcomed = true; connecting = false; connAttempt = 0; clearTimeout(timeout); const dot = document.getElementById('serverStatus'); if (dot) { dot.style.background = 'var(--green)'; dot.style.boxShadow = '0 0 10px var(--green)'; } }
-    if (msg.type === 'full') full = true;
-    try { onMessage(msg); } catch (e) { console.error(e); }
-  };
-  socket.onerror = () => {};
-  socket.onclose = () => {
-    clearTimeout(timeout); if (ws !== socket || gen !== connGeneration) return;
-    voice?.stop(); voice = null; ui.voice(false);
-    if (full) { connectionFailed('Сервер заполнен: уже два игрока онлайн. Попробуй позже.'); return; }
-    const wasInGame = welcomed || mode === 'game';
-    const max = wasInGame ? 6 : 3;
-    if (connAttempt < max) {
-      connAttempt++; mode = 'menu'; ui.el.hud.hidden = true;
-      ui.loading(65, wasInGame ? `Связь потеряна. Переподключение ${connAttempt}/${max}…` : `Сервер не ответил. Повтор ${connAttempt}/${max}…`);
-      reconnectTimer = setTimeout(tryConnect, 1200);
-    } else connectionFailed(wasInGame ? 'Соединение с сервером потеряно. Нажми «Играть онлайн», чтобы войти снова.' : 'Не удалось подключиться к игровому серверу. Проверь интернет или попробуй позже.');
-  };
+  if (connAttempt > 0) micPromise = requestMicrophone();
+  try {
+    const { socket, welcome } = await openGame(connTokenValue, text => { if (gen === connGeneration) ui.loading(75, text); });
+    if (gen !== connGeneration) { socket.close(); return; }
+    ws = socket; connecting = false; connAttempt = 0;
+    socket.onmessage = ev => { if (ws !== socket) return; let msg; try { msg = JSON.parse(ev.data); } catch { return; } try { onMessage(msg); } catch (e) { console.error(e); } };
+    socket.onerror = () => {};
+    socket.onclose = () => {
+      if (ws !== socket || gen !== connGeneration) return;
+      voice?.stop(); voice = null; pendingSignals.length = 0; ui.voice(false);
+      const wasInGame = mode === 'game';
+      const max = wasInGame ? 8 : 2;
+      if (connAttempt < max) {
+        connAttempt++; mode = 'menu'; ui.el.hud.hidden = true;
+        ui.loading(65, wasInGame ? `Связь потеряна. Переподключение ${connAttempt}/${max}…` : `Повторное подключение ${connAttempt}/${max}…`);
+        reconnectTimer = setTimeout(tryConnect, 1200);
+      } else connectionFailed(wasInGame ? 'Соединение потеряно. Нажми «Играть онлайн», чтобы вернуться.' : 'Игровой сервер не ответил. Нажми «Играть онлайн» для повтора.');
+    };
+    socket._handoff?.();
+    onMessage(welcome);
+    const dot = document.getElementById('serverStatus'); if (dot) { dot.style.background = 'var(--green)'; dot.style.boxShadow = '0 0 10px var(--green)'; }
+    ui.connection?.(socket.transport);
+  } catch (e) {
+    if (gen !== connGeneration) return;
+    if (e.code === 'FULL') { connectionFailed('На сервере уже два игрока. Когда один выйдет, место освободится.'); return; }
+    if (connAttempt < 2) { connAttempt++; reconnectTimer = setTimeout(tryConnect, 1200); }
+    else connectionFailed(e.message || 'Не удалось подключиться к игровому серверу');
+  }
 }
 async function play() {
   if (mode === 'game' || connecting) return;
@@ -166,7 +175,6 @@ async function play() {
   ui.loading(55, 'Запрос микрофона и подключение…');
   connTokenValue = localStorage.getItem('di_token');
   if (!connTokenValue) { connTokenValue = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)); localStorage.setItem('di_token', connTokenValue); }
-  try { connBase = await getServerBase(); } catch (e) { connectionFailed(e.message); return; }
   tryConnect();
 }
 function quit() {
@@ -208,7 +216,7 @@ engine.runRenderLoop(() => {
       pos.x = Math.max(-58, Math.min(58, pos.x)); pos.z = Math.max(-38, Math.min(58, pos.z));
       const moving = Math.hypot(mv.x, mv.z) > .05; bob += dt * (sprint ? 11 : 7) * (moving ? 1 : 0);
       if (moving && now - lastStep > (sprint ? 300 : 450)) { audio.footstep(); lastStep = now; }
-      send(ws, { type: 'input', x: pos.x, z: pos.z, yaw: controls.yaw, pitch: controls.pitch, sprint, moving });
+      if (now - lastNetInput >= 50) { lastNetInput = now; send(ws, { type: 'input', x: pos.x, z: pos.z, yaw: controls.yaw, pitch: controls.pitch, sprint, moving }); }
       const spawnT = Math.min(1, (now - spawnStart) / 2200); const eye = EYE * (.55 + .45 * spawnT);
       pos.y += (groundHeight(pos.x, pos.z) + eye + (moving ? Math.sin(bob) * .035 : 0) - pos.y) * Math.min(1, dt * 12);
       camera.position.set(pos.x, pos.y, pos.z); camera.rotation.set(controls.pitch, controls.yaw, 0);

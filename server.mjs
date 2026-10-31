@@ -1,4 +1,6 @@
 import http from 'node:http';
+import { EventEmitter } from 'node:events';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -52,7 +54,7 @@ guards.push({ id: uid(), x: 18, z: 25, yaw: 0, tx: 18, tz: 33, health: 80, patro
 guards.push({ id: uid(), x: 30, z: 33, yaw: 3, tx: 30, tz: 25, health: 80, patrol: 1 });
 const cashier = { id: 'cashier', kind: 'cashier', x: 24, z: 33, yaw: Math.PI, panic: false };
 
-function send(ws, msg) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
+function send(ws, msg) { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); }
 function broadcast(msg) { for (const p of players.values()) send(p.ws, msg); }
 function event(p, kind, data = {}) { send(p.ws, { type: 'event', kind, ...data }); }
 function publicPlayer(p) {
@@ -316,10 +318,45 @@ function publicServerUrl() {
   if (process.env.E2B_SANDBOX_ID) return `https://${PORT}-${process.env.E2B_SANDBOX_ID}.e2b.app`;
   return '';
 }
+class PollClient extends EventEmitter {
+  constructor(id) { super(); this.session = id; this.readyState = 1; this.queue = []; this.waiter = null; this.lastSeen = Date.now(); this.closed = false; }
+  send(raw) {
+    if (this.closed) return;
+    const msg = JSON.parse(raw);
+    if (msg.type === 'snapshot') { const i = this.queue.findIndex(m => m.type === 'snapshot'); if (i >= 0) this.queue.splice(i, 1); }
+    this.queue.push(msg); if (this.queue.length > 300) this.queue.shift();
+    this._flush();
+  }
+  _flush() { if (!this.waiter || !this.queue.length) return; const { res } = this.waiter; clearTimeout(this.waiter.timer); this.waiter = null; json(res, { messages: this.queue.splice(0) }); }
+  poll(res) {
+    this.lastSeen = Date.now();
+    if (this.waiter) json(this.waiter.res, { messages: [] });
+    const timer = setTimeout(() => { if (this.waiter?.res === res) { this.waiter = null; json(res, { messages: [] }); } }, 20000);
+    this.waiter = { res, timer }; this._flush();
+    res.on('close', () => { if (this.waiter?.res === res) { clearTimeout(timer); this.waiter = null; } });
+  }
+  close() {
+    if (this.closed) return; this.closed = true; this.readyState = 3; pollSessions.delete(this.session);
+    if (this.waiter) { clearTimeout(this.waiter.timer); json(this.waiter.res, { messages: [] }); this.waiter = null; }
+    this.emit('close');
+  }
+  terminate() { this.close(); }
+  ping() { this.lastSeen = Date.now(); }
+}
+const pollSessions = new Map();
+function json(res, data, status = 200) { if (res.writableEnded) return; res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS' }); res.end(JSON.stringify(data)); }
+function readBody(req) { return new Promise((resolve, reject) => { let body = ''; req.on('data', c => { body += c; if (body.length > 65536) { reject(new Error('body too large')); req.destroy(); } }); req.on('end', () => { try { resolve(body ? JSON.parse(body) : {}); } catch (e) { reject(e); } }); req.on('error', reject); }); }
+setInterval(() => { for (const c of pollSessions.values()) if (Date.now() - c.lastSeen > 45000) c.close(); }, 5000);
+
 const server = http.createServer((req, res) => {
   const pathname = (req.url || '/').split('?')[0];
+  if (req.method === 'OPTIONS') { json(res, {}); return; }
   if (pathname === '/server-config.json') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }); res.end(JSON.stringify({ serverUrl: publicServerUrl(), room: 'district-1', maxPlayers: 2 })); return; }
-  if (pathname === '/healthz') { res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(JSON.stringify({ ok: true, players: players.size, maxPlayers: 2 })); return; }
+  if (pathname === '/healthz') { json(res, { ok: true, players: players.size, maxPlayers: 2, room: 'district-1', transports: ['websocket', 'https-poll'], version: '0.2.2' }); return; }
+  if (pathname === '/game/session' && req.method === 'POST') { const id = randomUUID(); const client = new PollClient(id); pollSessions.set(id, client); attachGame(client); json(res, { session: id, transport: 'https-poll' }); return; }
+  if (pathname === '/game/send' && req.method === 'POST') { readBody(req).then(body => { const c = pollSessions.get(String(body.session || '')); if (!c) { json(res, { error: 'session expired' }, 410); return; } c.lastSeen = Date.now(); c.emit('message', JSON.stringify(body.message || {})); json(res, { ok: true }); }).catch(() => json(res, { error: 'bad request' }, 400)); return; }
+  if (pathname === '/game/poll' && req.method === 'GET') { const id = new URL(req.url, 'http://localhost').searchParams.get('session'); const c = pollSessions.get(id); if (!c) { json(res, { error: 'session expired' }, 410); return; } c.poll(res); return; }
+  if (pathname === '/game/leave' && req.method === 'POST') { readBody(req).then(body => { pollSessions.get(String(body.session || ''))?.close(); json(res, { ok: true }); }).catch(() => json(res, { ok: false })); return; }
   if (vite) vite.middlewares(req, res); else if (handler) handler(req, res); else { res.writeHead(404); res.end(); }
 });
 if (DEV) {
@@ -332,7 +369,7 @@ wss.on('close', () => clearInterval(heartbeat));
 server.on('upgrade', (req, socket, head) => {
   if (req.url.startsWith('/game')) wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
 });
-wss.on('connection', ws => {
+function attachGame(ws) {
   let player = null;
   ws.isAlive = true; ws.on('pong', () => { ws.isAlive = true; });
   ws.on('error', () => {});
@@ -341,16 +378,20 @@ wss.on('connection', ws => {
     if (msg.type === 'join') {
       const token = String(msg.token || uid()).slice(0, 64);
       const existing = [...players.values()].find(p => p.token === token);
-      if (existing) { existing.ws.close(); players.delete(existing.ws); slots[existing.slot] = null; }
+      if (existing) {
+        const old = existing.ws; players.delete(old); existing.ws = ws; player = existing; players.set(ws, existing);
+        try { old.close(); } catch {}
+        send(ws, { type: 'welcome', id: existing.id, slot: existing.slot, player: publicPlayer(existing), inventory: existing.inventory, storage: save.storage, balance: existing.balance, resume: true, online: players.size, room: 'district-1' });
+        return;
+      }
       const slot = slots[0] === null ? 0 : slots[1] === null ? 1 : -1;
-      if (slot < 0) { send(ws, { type: 'full' }); ws.close(); return; }
+      if (slot < 0) { send(ws, { type: 'full', online: players.size, maxPlayers: 2 }); ws.close(); return; }
       const profile = save.profiles[token] || { balance: 0, inventory: defaultInventory(), name: slot === 0 ? 'Deni' : 'Islam' };
       const bed = BEDS[slot];
       player = { id: uid(), token, slot, name: profile.name || (slot === 0 ? 'Deni' : 'Islam'), char: slot === 0 ? 'gentleman' : 'gopnik', ws, x: bed.x, z: bed.z, yaw: 0, pitch: 0, health: 100, stamina: 100, wanted: 0, balance: profile.balance || 0, inventory: cleanInventory(profile.inventory), selected: 0, spawnUntil: Date.now() + 2500, lastDamage: 0, lastCrime: 0, hiddenTime: 0, carrying: null, steal: null, sprinting: false, moving: false };
       players.set(ws, player); slots[slot] = player.id;
-      send(ws, { type: 'welcome', id: player.id, slot, player: publicPlayer(player), inventory: player.inventory, storage: save.storage, balance: player.balance });
-      broadcast({ type: 'event', kind: 'toast', text: `${player.name} в сети` });
-      for (const other of players.values()) if (other !== player) send(other.ws, { type: 'event', kind: 'peerJoined', slot });
+      send(ws, { type: 'welcome', id: player.id, slot, player: publicPlayer(player), inventory: player.inventory, storage: save.storage, balance: player.balance, resume: false, online: players.size, room: 'district-1', peers: [...players.values()].filter(p => p !== player).map(publicPlayer) });
+      broadcast({ type: 'event', kind: 'playerJoined', slot, name: player.name, online: players.size, text: `Игрок ${slot + 1} зашёл на сервер` });
       return;
     }
     if (!player) return;
@@ -373,8 +414,15 @@ wss.on('connection', ws => {
       case 'signal': { const other = [...players.values()].find(p => p !== player); if (other) send(other.ws, { type: 'signal', data: msg.data }); break; }
     }
   });
-  ws.on('close', () => { if (player) { saveProfile(player); players.delete(ws); slots[player.slot] = null; broadcast({ type: 'event', kind: 'toast', text: `${player.name} вышел` }); } });
-});
+  ws.on('close', () => {
+    if (!player || players.get(ws) !== player) return;
+    saveProfile(player); players.delete(ws);
+    if (slots[player.slot] === player.id) slots[player.slot] = null;
+    broadcast({ type: 'event', kind: 'playerLeft', slot: player.slot, name: player.name, online: players.size, text: `Игрок ${player.slot + 1} вышел. Можно продолжать играть одному.` });
+  });
+}
+wss.on('connection', attachGame);
+
 function persistNow() { try { fs.mkdirSync(path.dirname(SAVE_PATH), { recursive: true }); fs.writeFileSync(SAVE_PATH, JSON.stringify(save)); } catch (e) { console.error('persist', e); } }
 process.on('SIGTERM', () => { for (const p of players.values()) saveProfile(p); persistNow(); process.exit(0); });
 process.on('SIGINT', () => { for (const p of players.values()) saveProfile(p); persistNow(); process.exit(0); });
